@@ -124,6 +124,7 @@
   .keys kbd { font-family: "IBM Plex Mono", monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
 
   .ez { font-size: 13px; line-height: 1.5; color: var(--muted); margin-top: 6px; font-weight: 400; }
+  .answer .w.kw, .en-full .kw { font-weight: 700; color: var(--copper); }
   .ez b { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--copper); margin-right: 4px; }
   .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 
@@ -178,7 +179,7 @@
 <div class="wrap">
   <header>
     <h1>CIT 대본 암기카드</h1>
-    <p>보고 듣기 → 단어 배치 → 빈칸 채우기, 세 단계로 한 문장씩 외워요.</p>
+    <p>문법보다 말할 내용을 먼저. 보고 듣기 → 덩어리 배치 → 핵심어 빈칸, 세 단계로 외워요.</p>
   </header>
 
   <div class="flow" id="flow" aria-label="발표 흐름"></div>
@@ -190,6 +191,13 @@
         <button id="viewLearn" aria-pressed="true">단계 학습</button>
         <button id="viewCard" aria-pressed="false">복습 카드</button>
         <button id="viewScript" aria-pressed="false">전체 대본</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="label">외울 버전</span>
+      <div class="seg" role="group" aria-label="외울 버전">
+        <button id="verOrig" aria-pressed="true">원문 대본</button>
+        <button id="verEz" aria-pressed="false">쉬운 말</button>
       </div>
     </div>
     <div class="row" id="frontRow">
@@ -482,6 +490,8 @@ const EASY = {
  ]
 };
 const ezHtml = c => `<div class="ez"><b>쉽게 말하면</b> ${esc(c.ez)}</div>`;
+const EN = c => state.ver === "ez" ? c.ez : c.en;            // 지금 외우는 영어
+const subHtml = c => state.ver === "ez" ? `<div class="ez"><b>원문</b> ${esc(c.en)}</div>` : ezHtml(c);
 
 // 문장 단위 카드 목록
 const CARDS = [];
@@ -496,6 +506,7 @@ const store = {
 
 const state = {
   front: store.get("front", "ko"),
+  ver: store.get("ver", "orig"),
   pages: new Set(store.get("pages", PAGES.map(p => p.p))),
   shuffle: false,
   onlyAgain: false,
@@ -559,7 +570,7 @@ function renderCard() {
     $("counter").textContent = "0 / 0"; $("barFill").style.width = "0";
     $("grade").hidden = true; return;
   }
-  const c = d[state.idx];
+  const c0 = d[state.idx], c = { ...c0, en: EN(c0) };
   const frontLang = state.front, backLang = frontLang === "ko" ? "en" : "ko";
   const mark = state.marks[c.id];
   const tag = mark === "known" ? '<span class="tag known">외움</span>' : mark === "again" ? '<span class="tag again">다시</span>' : "";
@@ -571,7 +582,7 @@ function renderCard() {
     </div>
     ${state.hint && !state.flipped ? `<div><div class="lang">힌트 · 첫 글자</div><div class="hint">${esc(hintOf(c[backLang]))}</div></div>` : ""}
     ${state.flipped
-      ? `<div class="back"><div class="lang">${backLang === "ko" ? "한국어" : "English"}</div><div class="text">${esc(c[backLang])}</div>${ezHtml(c)}</div>`
+      ? `<div class="back"><div class="lang">${backLang === "ko" ? "한국어" : "English"}</div><div class="text">${esc(c[backLang])}</div>${subHtml(c0)}</div>`
       : `<div class="tap">머릿속으로 말해본 뒤 카드를 눌러 확인하세요</div>`}
   `;
   $("counter").textContent = `${state.idx + 1} / ${d.length}`;
@@ -598,7 +609,7 @@ function grade(v) {
 function speak() {
   const c = state.deck[state.idx]; if (!c || !("speechSynthesis" in window)) return;
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(c.en); u.lang = "en-US"; u.rate = 0.95;
+  const u = new SpeechSynthesisUtterance(EN(c)); u.lang = "en-US"; u.rate = 0.95;
   speechSynthesis.speak(u);
 }
 
@@ -665,7 +676,7 @@ function renderScript() {
   box.innerHTML = PAGES.filter(pg => state.pages.has(pg.p)).map(pg => `
     <details open>
       <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
-      <ol>${pg.en.map((en, i) => `<li><div class="en">${esc(en)}<div class="ez"><b>쉽게 말하면</b> ${esc(EASY[pg.p][i])}</div></div><div class="ko">${esc(pg.ko[i])}</div></li>`).join("")}</ol>
+      <ol>${pg.en.map((en, i) => `<li><div class="en">${esc(state.ver === "ez" ? EASY[pg.p][i] : en)}<div class="ez"><b>${state.ver === "ez" ? "원문" : "쉽게 말하면"}</b> ${esc(state.ver === "ez" ? en : EASY[pg.p][i])}</div></div><div class="ko">${esc(pg.ko[i])}</div></li>`).join("")}</ol>
     </details>`).join("");
 }
 $("script").addEventListener("click", e => {
@@ -691,15 +702,49 @@ function setView(v) {
   setPressed(ids[v], Object.values(ids).filter(i => i !== ids[v]));
   store.set("view", v);
 }
+function setVer(v) {
+  state.ver = v; store.set("ver", v);
+  v === "ez" ? setPressed("verEz", ["verOrig"]) : setPressed("verOrig", ["verEz"]);
+  buildDeck(); renderScript(); buildLearn();
+}
+$("verOrig").addEventListener("click", () => setVer("orig"));
+$("verEz").addEventListener("click", () => setVer("ez"));
 $("viewLearn").addEventListener("click", () => setView("learn"));
 $("viewCard").addEventListener("click", () => setView("card"));
 $("viewScript").addEventListener("click", () => setView("script"));
 
 // ===== 단계 학습 =====
 // progress[id]: 다음에 할 단계 (0 보고 듣기, 1 단어 배치, 2 빈칸), 3 = 완료
-const STAGES = ["보고 듣기", "단어 배치", "빈칸 채우기"];
+const STAGES = ["보고 듣기", "덩어리 배치", "핵심어 빈칸"];
+// 문법 단어는 빼고 '말할 내용'이 담긴 단어만 핵심어로
+const STOP = new Set("a an the is are was were be been being it its it's this that these those of to in on at for with by from and or but so as than then our we we're we've us you your i i'll let let's me my there here has have had do does will can can't into also just now very what what's really which while who them they their out up about is it one two".split(" "));
+const norm = w => core(w).replace(/[’]/g, "'").toLowerCase();
+const isKey = w => { const n = norm(w); return /\d/.test(n) || (n.replace(/[^\p{L}]/gu, "").length >= 3 && !STOP.has(n)); };
+const keyHtml = t => t.split(/\s+/).map(w => isKey(w) ? `<span class="kw">${esc(w)}</span>` : esc(w)).join(" ");
+// 의미 덩어리로 자르기 (2~4단어)
+const BREAK = new Set("and to for with in on at by from of that which while but so because than without including across into like as".split(" "));
+function chunks(text) {
+  const out = []; let cur = [];
+  text.split(/\s+/).forEach(t => {
+    const n = norm(t);
+    if (cur.length && (BREAK.has(n) || cur.length >= 4 || (cur.length >= 2 && /^(a|an|the)$/.test(n)))) { out.push(cur); cur = []; }
+    cur.push(t);
+    if (/[,.:;?!]$/.test(t)) { out.push(cur); cur = []; }
+  });
+  if (cur.length) out.push(cur);
+  // 한 단어짜리 조각은 앞(문장이 끝나지 않았으면) 또는 뒤 조각에 붙이기
+  const merged = [];
+  out.forEach((ch, i) => {
+    const last = merged[merged.length - 1];
+    if (ch.length === 1 && last && !/[.?!:]$/.test(last[last.length - 1])) last.push(...ch);
+    else if (ch.length === 1 && i < out.length - 1) out[i + 1].unshift(...ch);
+    else merged.push(ch);
+  });
+  return merged.map(ch => ch.join(" "));
+}
 const learn = { progress: store.get("progress", {}), queue: [], cur: null, stage: 0, tokens: [], answer: [], chips: [], blanks: [], placed: 0, mistakes: 0, done: false };
-const stageOf = c => learn.progress[c.id] || 0;
+const pkey = c => (state.ver === "ez" ? "ez:" : "") + c.id;
+const stageOf = c => learn.progress[pkey(c)] || 0;
 const shuffled = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const core = w => w.replace(/^[“"‘'(]+|[.,:;?!”"’')]+$/g, "");
 
@@ -721,19 +766,21 @@ function nextTask() {
   const c = learn.cur;
   if (c) {
     learn.stage = stageOf(c);
-    learn.tokens = c.en.split(/\s+/);
+    learn.tokens = learn.stage === 1 ? chunks(EN(c)) : EN(c).split(/\s+/);
     if (learn.stage === 1) {
       learn.answer = learn.tokens.slice();
       learn.chips = shuffled(learn.tokens.map((w, i) => ({ w, i })));
     } else if (learn.stage === 2) {
-      const cand = learn.tokens.map((w, i) => i).filter(i => core(learn.tokens[i]).replace(/[^\p{L}\p{N}]/gu, "").length >= 3);
+      const cand = learn.tokens.map((w, i) => i).filter(i => isKey(learn.tokens[i]));
       const pool = cand.length ? cand : learn.tokens.map((w, i) => i);
-      const n = Math.max(1, Math.round(pool.length * 0.5));
-      learn.blanks = shuffled(pool).slice(0, n).sort((a, b) => a - b);
+      const n = Math.max(1, Math.round(pool.length * 0.6));
+      // 숫자·고유명사를 먼저, 나머지는 섞어서
+      const score = i => { const w = learn.tokens[i]; return (/\d/.test(w) ? 100 : 0) + (i > 0 && /^[A-Z]/.test(w) ? 20 : 0) + Math.random() * 10; };
+      learn.blanks = pool.slice().sort((a, b) => score(b) - score(a)).slice(0, n).sort((a, b) => a - b);
       learn.answer = learn.blanks.map(i => core(learn.tokens[i]));
       const used = new Set(learn.answer.map(w => w.toLowerCase()));
-      const others = shuffled(CARDS.filter(x => x.id !== c.id).flatMap(x => x.en.split(/\s+/).map(core)))
-        .filter(w => w.length >= 4 && !used.has(w.toLowerCase()) && (used.add(w.toLowerCase()), true)).slice(0, 2);
+      const others = shuffled(CARDS.filter(x => x.id !== c.id).flatMap(x => EN(x).split(/\s+/).filter(isKey).map(core)))
+        .filter(w => w.length >= 3 && !used.has(w.toLowerCase()) && (used.add(w.toLowerCase()), true)).slice(0, 2);
       learn.chips = shuffled([...learn.answer, ...others].map((w, i) => ({ w, i })));
     }
   }
@@ -744,7 +791,7 @@ function renderLearnProgress() {
   const scope = CARDS.filter(c => state.pages.has(c.p));
   const sum = scope.reduce((a, c) => a + stageOf(c), 0);
   const cnt = [0, 0, 0, 0]; scope.forEach(c => cnt[stageOf(c)]++);
-  $("lCounter").textContent = `보고 듣기 ${cnt[0]} · 단어 배치 ${cnt[1]} · 빈칸 ${cnt[2]} · 완료 ${cnt[3]}`;
+  $("lCounter").textContent = `${state.ver === "ez" ? "쉬운 말" : "원문"} · 보고 듣기 ${cnt[0]} · 배치 ${cnt[1]} · 빈칸 ${cnt[2]} · 완료 ${cnt[3]}`;
   const pct = scope.length ? Math.round(sum / (scope.length * 3) * 100) : 0;
   $("lPct").textContent = pct + "%";
   $("lBar").style.width = pct + "%";
@@ -756,7 +803,7 @@ function renderLearn() {
   if (!c) {
     box.innerHTML = `<div class="card lcard"><div class="empty">선택한 페이지의 문장을 모두 외웠어요!<br>‘복습 카드’로 점검하거나 처음부터 다시 연습해 보세요.</div></div>
       <div class="lrow"><button class="primary" id="lRestart">이 페이지들 처음부터 다시</button></div>`;
-    $("lRestart").onclick = () => { CARDS.forEach(x => { if (state.pages.has(x.p)) delete learn.progress[x.id]; }); store.set("progress", learn.progress); buildLearn(); };
+    $("lRestart").onclick = () => { CARDS.forEach(x => { if (state.pages.has(x.p)) delete learn.progress[pkey(x)]; }); store.set("progress", learn.progress); buildLearn(); };
     return;
   }
   const st = learn.stage;
@@ -764,7 +811,7 @@ function renderLearn() {
   let body = "", bank = "", foot = "";
 
   if (st === 0) {
-    body = `<div><div class="lang">English</div><div class="en-full">${esc(c.en)}</div>${ezHtml(c)}</div>`;
+    body = `<div><div class="lang">English</div><div class="en-full">${keyHtml(EN(c))}</div>${subHtml(c)}</div>`;
     foot = `<div class="lrow"><button id="lSpeak">듣기</button><button class="primary" id="lNext">외웠어요, 다음 단계로</button></div>`;
   } else {
     let ans = "";
@@ -779,14 +826,14 @@ function renderLearn() {
         return `<span class="w">${esc(lead)}<span class="blank${idx === learn.placed ? " next" : ""}" style="min-width:${Math.max(2.5, cw.length * 0.55)}em"></span>${esc(rest)}</span>`;
       }).join("");
     }
-    body = `<div><div class="lang">English</div><div class="answer">${ans}</div>${learn.done ? ezHtml(c) : ""}</div>`;
+    body = `<div><div class="lang">English</div><div class="answer">${ans}</div>${learn.done ? subHtml(c) : ""}</div>`;
     if (!learn.done) {
       bank = `<div class="bank" id="bank">${learn.chips.map((ch, j) => `<button data-j="${j}"${ch.used ? " disabled" : ""}>${esc(ch.w)}</button>`).join("")}</div>`;
-      foot = `<div class="lrow"><button class="ghost" id="lGiveup">모르겠어요 (한 단어 보기)</button></div>`;
+      foot = `<div class="lrow"><button class="ghost" id="lGiveup">모르겠어요 (하나 보기)</button></div>`;
     } else {
       const ok = learn.mistakes === 0;
       const msg = ok
-        ? (st === 2 ? "완벽해요! 이 문장은 완료했어요." : "정확해요! 다음엔 빈칸 채우기로 올라갑니다.")
+        ? (st === 2 ? "완벽해요! 이 문장은 완료했어요." : "정확해요! 다음엔 핵심어 빈칸으로 올라갑니다.")
         : `실수 ${learn.mistakes}번. 조금 뒤에 이 단계를 한 번 더 해요.`;
       foot = `<div class="feedback ${ok ? "good" : "retry"}">${msg}</div>
         <div class="lrow"><button id="lSpeak">듣기</button><button class="primary" id="lNext">계속</button></div>`;
@@ -802,17 +849,17 @@ function renderLearn() {
     </div>
     ${bank}${foot}`;
 
-  if ($("lSpeak")) $("lSpeak").onclick = () => speakText(c.en);
+  if ($("lSpeak")) $("lSpeak").onclick = () => speakText(EN(c));
   if ($("lNext")) $("lNext").onclick = finishTask;
   if ($("lGiveup")) $("lGiveup").onclick = () => {
     const want = learn.answer[learn.placed];
-    const ch = learn.chips.find(x => !x.used && x.w === want);
+    const ch = learn.chips.find(x => !x.used && norm(x.w) === norm(want));
     learn.mistakes++; place(ch);
   };
   if ($("bank")) $("bank").onclick = e => {
     const b = e.target.closest("button"); if (!b) return;
     const ch = learn.chips[+b.dataset.j];
-    if (ch.w === learn.answer[learn.placed]) place(ch);
+    if (norm(ch.w) === norm(learn.answer[learn.placed])) place(ch);
     else {
       learn.mistakes++;
       b.classList.remove("wrong"); void b.offsetWidth; b.classList.add("wrong");
@@ -823,14 +870,14 @@ function renderLearn() {
 function place(ch) {
   if (ch) ch.used = true;
   learn.placed++;
-  if (learn.placed >= learn.answer.length) { learn.done = true; speakText(learn.cur.en); }
+  if (learn.placed >= learn.answer.length) { learn.done = true; speakText(EN(learn.cur)); }
   renderLearn();
 }
 
 function finishTask() {
   const c = learn.cur; if (!c) return;
   if (learn.stage === 0 || learn.mistakes === 0) {
-    learn.progress[c.id] = learn.stage + 1;
+    learn.progress[pkey(c)] = learn.stage + 1;
     store.set("progress", learn.progress);
   }
   // 아직 안 끝난 문장은 두 문장 뒤에 다시 등장
@@ -842,7 +889,7 @@ function finishTask() {
 setFront(state.front);
 setView(store.get("view", "learn"));
 renderChips();
-buildLearn();
+setVer(state.ver);
 buildDeck();
 renderScript();
 </script>
