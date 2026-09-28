@@ -140,7 +140,6 @@
   .opt.picked { border-color: var(--copper); background: var(--copper-soft); }
   .opt.picked .k { color: var(--copper); font-weight: 600; }
   .opt.picked .b .pick { background: var(--copper); border-color: var(--copper); color: var(--surface); }
-  .note-mine .opt { grid-template-columns: 1fr auto; }
   .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 
   /* 단계 학습 */
@@ -186,8 +185,6 @@
   @media (max-width: 480px) {
     .opt { grid-template-columns: 56px 1fr; }
     .opt .b { grid-column: 2; }
-    .note-mine .opt { grid-template-columns: 1fr; }
-    .note-mine .opt .b { grid-column: 1; }
     .front { font-size: 19px; }
     .back { font-size: 17px; }
     .card { min-height: 260px; padding: 18px 16px; }
@@ -283,7 +280,7 @@
   <!-- 전체 대본 모드 -->
   <!-- 표현 노트 -->
   <section id="noteView" hidden>
-    <p class="note-intro">한 문장을 여러 방식으로 말해볼 수 있어요. 마음에 드는 표현에 ‘내 것’을 누르면, ‘외울 버전’에서 <b>내 버전</b>을 골라 그 표현으로 연습할 수 있어요.</p>
+    <p class="note-intro">한 문장을 여러 방식으로 말해볼 수 있어요. 마음에 드는 표현에 ‘내 것’을 누르면(여러 개 가능), ‘외울 버전’에서 <b>내 버전</b>을 골라 그 표현으로 연습할 수 있어요.</p>
     <div class="row" style="margin-bottom:10px">
       <span class="label">보기</span>
       <div class="seg" role="group" aria-label="노트 보기">
@@ -797,7 +794,11 @@ const VARIANTS = {
 };
 const OPTS = [["orig", "원문"], ["ez", "쉬운 말"], ["short", "짧게"], ["alt", "다른 표현"], ["formal", "격식 있게"]];
 const optText = (c, k) => k === "orig" ? c.en : k === "ez" ? c.ez : VARIANTS[c.p][c.n - 1][["short", "alt", "formal"].indexOf(k)];
-const myKey = c => picks[c.id] || "ez";                         // 안 골랐으면 쉬운 말
+const myKeys = c => picks[c.id] && picks[c.id].length ? OPTS.map(o => o[0]).filter(k => picks[c.id].includes(k)) : ["ez"];  // 안 골랐으면 쉬운 말
+const myKey = c => c.mk || myKeys(c)[0];
+const optLabel = k => OPTS.find(o => o[0] === k)[1];
+// 내 버전이면 고른 표현마다 카드 한 장
+const DECK = () => state.ver === "mine" ? CARDS.flatMap(c => myKeys(c).map(k => ({ ...c, mk: k }))) : CARDS;
 const EN = c => state.ver === "ez" ? c.ez : state.ver === "mine" ? optText(c, myKey(c)) : c.en;   // 지금 외우는 영어
 const subHtml = c => state.ver === "orig" ? ezHtml(c) : `<div class="ez"><b>원문</b> ${hl(c.en)}</div>`;
 
@@ -812,7 +813,8 @@ const store = {
   set(k, v) { try { localStorage.setItem("cit-cards:" + k, JSON.stringify(v)); } catch (e) {} }
 };
 
-const picks = store.get("picks", {});                           // 문장 id -> 고른 표현 키
+const picks = store.get("picks", {});                           // 문장 id -> 고른 표현 키 목록
+Object.keys(picks).forEach(id => { if (typeof picks[id] === "string") picks[id] = [picks[id]]; });
 const state = {
   front: store.get("front", "ko"),
   ver: store.get("ver", "orig"),
@@ -849,7 +851,7 @@ $("pageChips").addEventListener("click", e => {
 });
 
 function buildDeck() {
-  let d = CARDS.filter(c => state.pages.has(c.p));
+  let d = DECK().filter(c => state.pages.has(c.p));
   if (state.onlyAgain) d = d.filter(c => state.marks[c.id] !== "known");
   if (state.shuffle) {
     d = d.slice();
@@ -871,8 +873,8 @@ function hintOf(text) {
 
 function renderCard() {
   const d = state.deck, card = $("card");
-  const known = CARDS.filter(c => state.pages.has(c.p) && state.marks[c.id] === "known").length;
-  const inScope = CARDS.filter(c => state.pages.has(c.p)).length;
+  const known = DECK().filter(c => state.pages.has(c.p) && state.marks[c.id] === "known").length;
+  const inScope = DECK().filter(c => state.pages.has(c.p)).length;
   $("stats").textContent = `외운 문장 ${known} / ${inScope}`;
   if (!d.length) {
     card.innerHTML = `<div class="empty">${state.onlyAgain ? "모두 외웠어요! ‘못 외운 것만’을 끄면 전체를 다시 볼 수 있어요." : "선택한 페이지에 문장이 없어요."}</div>`;
@@ -884,7 +886,7 @@ function renderCard() {
   const mark = state.marks[c.id];
   const tag = mark === "known" ? '<span class="tag known">외움</span>' : mark === "again" ? '<span class="tag again">다시</span>' : "";
   card.innerHTML = `
-    <div class="card-top"><span><b class="mono">${c.p}</b> ${esc(c.t)} · 문장 ${c.n}/${c.total}</span>${tag}</div>
+    <div class="card-top"><span><b class="mono">${c.p}</b> ${esc(c.t)} · 문장 ${c.n}/${c.total}${c.mk ? ` · ${optLabel(c.mk)}` : ""}</span>${tag}</div>
     <div>
       <div class="lang">${frontLang === "ko" ? "한국어" : "English"}</div>
       <div class="front">${hl(c[frontLang])}</div>
@@ -986,7 +988,7 @@ function renderScript() {
   box.innerHTML = PAGES.filter(pg => state.pages.has(pg.p)).map(pg => `
     <details open>
       <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
-      <ol>${pg.en.map((en, i) => `<li>${(c => `<div class="en">${hl(EN(c))}${subHtml(c)}</div>`)(CARDS.find(x => x.id === pg.p + "-" + (i + 1)))}<div class="ko">${hl(pg.ko[i])}</div></li>`).join("")}</ol>
+      <ol>${pg.en.map((en, i) => `<li>${(c => `<div class="en">${state.ver === "mine" ? myKeys(c).map(k => hl(optText(c, k))).join("<br>") : hl(EN(c))}${subHtml(c)}</div>`)(CARDS.find(x => x.id === pg.p + "-" + (i + 1)))}<div class="ko">${hl(pg.ko[i])}</div></li>`).join("")}</ol>
     </details>`).join("");
 }
 $("script").addEventListener("click", e => {
@@ -1033,14 +1035,14 @@ function renderNote() {
     <details open>
       <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
       ${CARDS.filter(c => c.p === pg.p).map(c => {
-        const mine = picks[c.id];
-        const opts = noteMine ? [[myKey(c), ""]] : OPTS;
+        const mine = picks[c.id] || [];
+        const opts = noteMine ? OPTS.filter(o => myKeys(c).includes(o[0])) : OPTS;
         return `<div class="note-s">
           <div class="note-ko">${c.n}. ${hl(c.ko)}</div>
-          ${opts.map(([k, label]) => `<div class="opt${!noteMine && mine === k ? " picked" : ""}">
-            ${noteMine ? "" : `<span class="k">${label}</span>`}
+          ${opts.map(([k, label]) => `<div class="opt${!noteMine && mine.includes(k) ? " picked" : ""}">
+            <span class="k">${label}</span>
             <span class="t">${hl(optText(c, k))}</span>
-            <span class="b"><button data-say="${c.id}|${k}">듣기</button>${noteMine ? "" : `<button class="pick" data-pick="${c.id}|${k}">${mine === k ? "내 것 ✓" : "내 것"}</button>`}</span>
+            <span class="b"><button data-say="${c.id}|${k}">듣기</button>${noteMine ? "" : `<button class="pick" data-pick="${c.id}|${k}">${mine.includes(k) ? "내 것 ✓" : "내 것"}</button>`}</span>
           </div>`).join("")}
         </div>`;
       }).join("")}
@@ -1051,7 +1053,9 @@ $("note").addEventListener("click", e => {
   const [id, k] = (b.dataset.say || b.dataset.pick).split("|");
   const c = CARDS.find(x => x.id === id);
   if (b.dataset.say) return speakText(optText(c, k));
-  if (picks[id] === k) delete picks[id]; else picks[id] = k;
+  const cur = picks[id] || [];
+  picks[id] = cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k];
+  if (!picks[id].length) delete picks[id];
   store.set("picks", picks);
   renderNote();
   if (state.ver === "mine") { buildDeck(); renderScript(); buildLearn(); }
@@ -1111,7 +1115,7 @@ function speakText(t) {
 }
 
 function buildLearn() {
-  learn.queue = CARDS.filter(c => state.pages.has(c.p) && stageOf(c) < 3);
+  learn.queue = DECK().filter(c => state.pages.has(c.p) && stageOf(c) < 3);
   nextTask();
 }
 
@@ -1134,7 +1138,7 @@ function nextTask() {
       learn.blanks = pool.slice().sort((a, b) => score(b) - score(a)).slice(0, n).sort((a, b) => a - b);
       learn.answer = learn.blanks.map(i => core(learn.tokens[i]));
       const used = new Set(learn.answer.map(w => w.toLowerCase()));
-      const others = shuffled(CARDS.filter(x => x.id !== c.id).flatMap(x => EN(x).split(/\s+/).filter(isKey).map(core)))
+      const others = shuffled(DECK().filter(x => x.id !== c.id).flatMap(x => EN(x).split(/\s+/).filter(isKey).map(core)))
         .filter(w => w.length >= 3 && !used.has(w.toLowerCase()) && (used.add(w.toLowerCase()), true)).slice(0, 2);
       learn.chips = shuffled([...learn.answer, ...others].map((w, i) => ({ w, i })));
     }
@@ -1143,7 +1147,7 @@ function nextTask() {
 }
 
 function renderLearnProgress() {
-  const scope = CARDS.filter(c => state.pages.has(c.p));
+  const scope = DECK().filter(c => state.pages.has(c.p));
   const sum = scope.reduce((a, c) => a + stageOf(c), 0);
   const cnt = [0, 0, 0, 0]; scope.forEach(c => cnt[stageOf(c)]++);
   $("lCounter").textContent = `${{ orig: "원문", ez: "쉬운 말", mine: "내 버전" }[state.ver]} · 보고 듣기 ${cnt[0]} · 배치 ${cnt[1]} · 빈칸 ${cnt[2]} · 완료 ${cnt[3]}`;
@@ -1158,7 +1162,7 @@ function renderLearn() {
   if (!c) {
     box.innerHTML = `<div class="card lcard"><div class="empty">선택한 페이지의 문장을 모두 외웠어요!<br>‘복습 카드’로 점검하거나 처음부터 다시 연습해 보세요.</div></div>
       <div class="lrow"><button class="primary" id="lRestart">이 페이지들 처음부터 다시</button></div>`;
-    $("lRestart").onclick = () => { CARDS.forEach(x => { if (state.pages.has(x.p)) delete learn.progress[pkey(x)]; }); store.set("progress", learn.progress); buildLearn(); };
+    $("lRestart").onclick = () => { DECK().forEach(x => { if (state.pages.has(x.p)) delete learn.progress[pkey(x)]; }); store.set("progress", learn.progress); buildLearn(); };
     return;
   }
   const st = learn.stage;
@@ -1197,7 +1201,7 @@ function renderLearn() {
 
   box.innerHTML = `
     <div class="card lcard">
-      <div class="card-top"><span><b class="mono">${c.p}</b> ${esc(c.t)} · 문장 ${c.n}/${c.total}</span></div>
+      <div class="card-top"><span><b class="mono">${c.p}</b> ${esc(c.t)} · 문장 ${c.n}/${c.total}${c.mk ? ` · ${optLabel(c.mk)}` : ""}</span></div>
       <div class="stages">${pills}</div>
       <div><div class="lang">한국어</div><div class="front">${hl(c.ko)}</div></div>
       ${body}
