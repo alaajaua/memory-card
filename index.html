@@ -415,78 +415,78 @@ const PAGES = [
 // 말하기 쉬운 회화체 버전
 const EASY = {
  "1P": [
-  "CIT makes advanced materials for next-gen AI.",
-  "Today, I'll quickly show you our tech and why it matters for AI infrastructure."
+  "Hi, we're CIT. We make advanced materials for next-gen AI.",
+  "Let me quickly show you what we do, and why it matters for AI."
  ],
  "2P": [
-  "First, let me show you how we've been validated.",
-  "Our research is published in Nature, Nature Communications, and Advanced Materials.",
-  "And we won CES Innovation Awards two years in a row, 2025 and 2026.",
-  "Now, let's look at the problem we're solving."
+  "First, here's proof that our tech works.",
+  "We've published in Nature, Nature Communications, and Advanced Materials.",
+  "We also won CES Innovation Awards two years in a row, 2025 and 2026.",
+  "So, what problem are we solving?"
  ],
  "3P": [
-  "So, what's really holding back AI infrastructure?",
+  "You know what's really slowing down AI?",
   "Is it a lack of AI chips?",
   "No. The real problem is energy.",
-  "Data centers are running out of energy to grow."
+  "Data centers can't grow without more power."
  ],
  "4P": [
-  "And energy leads us to copper, the key material that moves data in AI hardware.",
+  "That's where copper comes in. Copper carries data inside AI hardware.",
   "Normal copper has a rough surface.",
-  "That means more heat and slower signals, so AI chips can't run at full speed."
+  "Rough copper makes more heat and slows signals down. So AI chips can't reach full speed."
  ],
  "5P": [
-  "That's why copper quality matters.",
-  "Two things matter here: surface roughness and grain boundaries.",
-  "A rough surface makes signals travel farther, and grain boundaries make electrons bounce around.",
-  "Both lead to more signal loss and more heat."
+  "That's why copper quality really matters.",
+  "Two things cause trouble: a rough surface and grain boundaries.",
+  "A rough surface makes the signal path longer. Grain boundaries make electrons bounce around.",
+  "Both mean more signal loss and more heat."
  ],
  "6P": [
-  "To fix this, we built ASE, Atomic Sputtering Epitaxy.",
-  "ASE lays down copper one atom at a time, so the film is super flat and even.",
+  "So we made a new technology called ASE. It stands for Atomic Sputtering Epitaxy.",
+  "ASE puts down copper one atom at a time. So it's super flat and even.",
   "Flatter copper means less signal loss and less heat."
  ],
  "7P": [
-  "ASE mixes the strengths of ALD and PVD, so it's flat, even, and fast.",
-  "It's ready for large-scale production.",
-  "And you can upgrade existing PVD tools for less than 2% extra cost."
+  "ASE takes the best of ALD and PVD. It's flat, even, and fast.",
+  "And it's ready for mass production.",
+  "Customers can easily upgrade their PVD machines. It adds less than 2% to the cost."
  ],
  "8P": [
-  "We use ASE in many areas.",
+  "We use ASE in three main areas.",
   "HVLP copper foil for AI boards, and copper-coated glass for chip packaging.",
-  "And FCCL for fast data transfer in flexible circuit boards."
+  "And FCCL for fast data in flexible circuit boards."
  ],
  "9P": [
   "First, AI accelerator boards.",
-  "NVIDIA's Vera Rubin uses 4th-gen HVLP copper. Our ASE copper is at 6th-gen level.",
+  "NVIDIA's Vera Rubin uses 4th-gen HVLP copper. Ours is at 6th-gen level.",
   "We cut roughness from 0.8 to 0.2 micrometers. That's about four times smoother."
  ],
  "10P": [
   "Second, glass substrates.",
-  "We tested it on several types of glass, with even coating inside 8-to-1 TGV holes.",
-  "And we put copper right on the glass, with no adhesion layer."
+  "It works on many kinds of glass. It even coats deep TGV holes evenly, at an 8 to 1 ratio.",
+  "And we put copper right on the glass. No adhesion layer needed."
  ],
  "11P": [
   "Third, FCCL.",
   "Our FCCL is ten times flatter than regular FCCL.",
-  "And it's already bringing in repeat sales."
+  "And we're already selling it, with repeat orders."
  ],
  "12P": [
-  "ASE gives us many ways to make money: coated products, licenses, single-crystal copper targets, and cables."
+  "ASE makes money in many ways. We sell coated products and license the tech. We also sell single-crystal copper targets and cables."
  ],
  "13P": [
-  "We're moving from proving the tech to scaling it up.",
+  "The tech is proven. Now we're scaling up.",
   "We keep adding customers and partners.",
-  "Our revenue goal is about 6 million dollars this year, 28 million next year, and 88 million in 2028."
+  "Our revenue goal? About 6 million dollars this year, 28 million next year, and 88 million in 2028."
  ],
  "14P": [
-  "Our team has deep materials know-how and real business experience.",
-  "Our researchers have studied copper for years, and our business team turns that tech into customers, production, and funding."
+  "Our team knows materials, and knows business too.",
+  "Our researchers have worked on copper for years. Our business team turns that into customers, production, and funding."
  ],
  "15P": [
-  "CIT is building advanced copper for next-gen AI.",
+  "CIT makes advanced copper for next-gen AI.",
   "Our goal is simple: flatter copper, faster data.",
-  "Thank you."
+  "Thanks for stopping by!"
  ]
 };
 const ezHtml = c => `<div class="ez"><b>쉽게 말하면</b> ${esc(c.ez)}</div>`;
@@ -743,6 +743,11 @@ function chunks(text) {
   return merged.map(ch => ch.join(" "));
 }
 const learn = { progress: store.get("progress", {}), queue: [], cur: null, stage: 0, tokens: [], answer: [], chips: [], blanks: [], placed: 0, mistakes: 0, done: false };
+// 쉬운 말 문장 수정(v2) 반영: 바뀐 문장의 진행도만 초기화
+if (store.get("ezv", 1) < 2) {
+  ["1P-1", "1P-2", "2P-1", "2P-2", "2P-3", "2P-4", "3P-1", "3P-4", "4P-1", "4P-3", "5P-1", "5P-2", "5P-3", "5P-4", "6P-1", "6P-2", "7P-1", "7P-2", "7P-3", "8P-1", "8P-3", "9P-2", "10P-2", "10P-3", "11P-3", "12P-1", "13P-1", "13P-3", "14P-1", "14P-2", "15P-1", "15P-3"].forEach(id => delete learn.progress["ez:" + id]);
+  store.set("progress", learn.progress); store.set("ezv", 2);
+}
 const pkey = c => (state.ver === "ez" ? "ez:" : "") + c.id;
 const stageOf = c => learn.progress[pkey(c)] || 0;
 const shuffled = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
