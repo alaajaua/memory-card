@@ -123,6 +123,8 @@
   .keys { text-align: center; font-size: 12px; color: var(--muted); }
   .keys kbd { font-family: "IBM Plex Mono", monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
 
+  .ez { font-size: 13px; line-height: 1.5; color: var(--muted); margin-top: 6px; font-weight: 400; }
+  .ez b { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--copper); margin-right: 4px; }
   .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 
   /* 단계 학습 */
@@ -402,10 +404,89 @@ const PAGES = [
   ]}
 ];
 
+// 말하기 쉬운 회화체 버전
+const EASY = {
+ "1P": [
+  "CIT makes advanced materials for next-gen AI.",
+  "Today, I'll quickly show you our tech and why it matters for AI infrastructure."
+ ],
+ "2P": [
+  "First, let me show you how we've been validated.",
+  "Our research is published in Nature, Nature Communications, and Advanced Materials.",
+  "And we won CES Innovation Awards two years in a row, 2025 and 2026.",
+  "Now, let's look at the problem we're solving."
+ ],
+ "3P": [
+  "So, what's really holding back AI infrastructure?",
+  "Is it a lack of AI chips?",
+  "No. The real problem is energy.",
+  "Data centers are running out of energy to grow."
+ ],
+ "4P": [
+  "And energy leads us to copper, the key material that moves data in AI hardware.",
+  "Normal copper has a rough surface.",
+  "That means more heat and slower signals, so AI chips can't run at full speed."
+ ],
+ "5P": [
+  "That's why copper quality matters.",
+  "Two things matter here: surface roughness and grain boundaries.",
+  "A rough surface makes signals travel farther, and grain boundaries make electrons bounce around.",
+  "Both lead to more signal loss and more heat."
+ ],
+ "6P": [
+  "To fix this, we built ASE, Atomic Sputtering Epitaxy.",
+  "ASE lays down copper one atom at a time, so the film is super flat and even.",
+  "Flatter copper means less signal loss and less heat."
+ ],
+ "7P": [
+  "ASE mixes the strengths of ALD and PVD, so it's flat, even, and fast.",
+  "It's ready for large-scale production.",
+  "And you can upgrade existing PVD tools for less than 2% extra cost."
+ ],
+ "8P": [
+  "We use ASE in many areas.",
+  "HVLP copper foil for AI boards, and copper-coated glass for chip packaging.",
+  "And FCCL for fast data transfer in flexible circuit boards."
+ ],
+ "9P": [
+  "First, AI accelerator boards.",
+  "NVIDIA's Vera Rubin uses 4th-gen HVLP copper. Our ASE copper is at 6th-gen level.",
+  "We cut roughness from 0.8 to 0.2 micrometers. That's about four times smoother."
+ ],
+ "10P": [
+  "Second, glass substrates.",
+  "We tested it on several types of glass, with even coating inside 8-to-1 TGV holes.",
+  "And we put copper right on the glass, with no adhesion layer."
+ ],
+ "11P": [
+  "Third, FCCL.",
+  "Our FCCL is ten times flatter than regular FCCL.",
+  "And it's already bringing in repeat sales."
+ ],
+ "12P": [
+  "ASE gives us many ways to make money: coated products, licenses, single-crystal copper targets, and cables."
+ ],
+ "13P": [
+  "We're moving from proving the tech to scaling it up.",
+  "We keep adding customers and partners.",
+  "Our revenue goal is about 6 million dollars this year, 28 million next year, and 88 million in 2028."
+ ],
+ "14P": [
+  "Our team has deep materials know-how and real business experience.",
+  "Our researchers have studied copper for years, and our business team turns that tech into customers, production, and funding."
+ ],
+ "15P": [
+  "CIT is building advanced copper for next-gen AI.",
+  "Our goal is simple: flatter copper, faster data.",
+  "Thank you."
+ ]
+};
+const ezHtml = c => `<div class="ez"><b>쉽게 말하면</b> ${esc(c.ez)}</div>`;
+
 // 문장 단위 카드 목록
 const CARDS = [];
 PAGES.forEach(pg => pg.en.forEach((en, i) => CARDS.push({
-  id: pg.p + "-" + (i + 1), p: pg.p, t: pg.t, n: i + 1, total: pg.en.length, en, ko: pg.ko[i]
+  id: pg.p + "-" + (i + 1), p: pg.p, t: pg.t, n: i + 1, total: pg.en.length, en, ko: pg.ko[i], ez: EASY[pg.p][i]
 })));
 
 const store = {
@@ -490,7 +571,7 @@ function renderCard() {
     </div>
     ${state.hint && !state.flipped ? `<div><div class="lang">힌트 · 첫 글자</div><div class="hint">${esc(hintOf(c[backLang]))}</div></div>` : ""}
     ${state.flipped
-      ? `<div class="back"><div class="lang">${backLang === "ko" ? "한국어" : "English"}</div><div class="text">${esc(c[backLang])}</div></div>`
+      ? `<div class="back"><div class="lang">${backLang === "ko" ? "한국어" : "English"}</div><div class="text">${esc(c[backLang])}</div>${ezHtml(c)}</div>`
       : `<div class="tap">머릿속으로 말해본 뒤 카드를 눌러 확인하세요</div>`}
   `;
   $("counter").textContent = `${state.idx + 1} / ${d.length}`;
@@ -584,7 +665,7 @@ function renderScript() {
   box.innerHTML = PAGES.filter(pg => state.pages.has(pg.p)).map(pg => `
     <details open>
       <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
-      <ol>${pg.en.map((en, i) => `<li><div class="en">${esc(en)}</div><div class="ko">${esc(pg.ko[i])}</div></li>`).join("")}</ol>
+      <ol>${pg.en.map((en, i) => `<li><div class="en">${esc(en)}<div class="ez"><b>쉽게 말하면</b> ${esc(EASY[pg.p][i])}</div></div><div class="ko">${esc(pg.ko[i])}</div></li>`).join("")}</ol>
     </details>`).join("");
 }
 $("script").addEventListener("click", e => {
@@ -683,7 +764,7 @@ function renderLearn() {
   let body = "", bank = "", foot = "";
 
   if (st === 0) {
-    body = `<div><div class="lang">English</div><div class="en-full">${esc(c.en)}</div></div>`;
+    body = `<div><div class="lang">English</div><div class="en-full">${esc(c.en)}</div>${ezHtml(c)}</div>`;
     foot = `<div class="lrow"><button id="lSpeak">듣기</button><button class="primary" id="lNext">외웠어요, 다음 단계로</button></div>`;
   } else {
     let ans = "";
@@ -698,7 +779,7 @@ function renderLearn() {
         return `<span class="w">${esc(lead)}<span class="blank${idx === learn.placed ? " next" : ""}" style="min-width:${Math.max(2.5, cw.length * 0.55)}em"></span>${esc(rest)}</span>`;
       }).join("");
     }
-    body = `<div><div class="lang">English</div><div class="answer">${ans}</div></div>`;
+    body = `<div><div class="lang">English</div><div class="answer">${ans}</div>${learn.done ? ezHtml(c) : ""}</div>`;
     if (!learn.done) {
       bank = `<div class="bank" id="bank">${learn.chips.map((ch, j) => `<button data-j="${j}"${ch.used ? " disabled" : ""}>${esc(ch.w)}</button>`).join("")}</div>`;
       foot = `<div class="lrow"><button class="ghost" id="lGiveup">모르겠어요 (한 단어 보기)</button></div>`;
