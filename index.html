@@ -124,7 +124,8 @@
   .keys kbd { font-family: "IBM Plex Mono", monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
 
   .ez { font-size: 13px; line-height: 1.5; color: var(--muted); margin-top: 6px; font-weight: 400; }
-  .answer .w.kw, .en-full .kw { font-weight: 700; color: var(--copper); }
+  mark.kw { background: none; color: var(--copper); font-weight: 700; }
+  .ez mark.kw { font-weight: 600; }
   .ez b { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--copper); margin-right: 4px; }
   /* 표현 노트 */
   .note-intro { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
@@ -522,7 +523,25 @@ const EASY = {
   "Thanks for stopping by!"
  ]
 };
-const ezHtml = c => `<div class="ez"><b>쉽게 말하면</b> ${esc(c.ez)}</div>`;
+// 핵심어 강조: 그 문장에서 말해야 할 내용(기술 이름·숫자·핵심 명사)
+const KEY_EN = ["CIT","AI boards","AI accelerator boards","accelerator boards", "next-generation AI", "next-gen AI", "AI infrastructure", "AI growth", "AI chips", "chip shortage", "AI accelerator", "AI hardware", "data centers", "data center", "data transmission", "energy", "power", "copper", "rough", "roughness", "surface roughness", "rough surface", "grain boundaries", "signal loss", "signal delay", "signal path", "heat", "electron scattering", "electrons", "ASE", "Atomic Sputtering Epitaxy", "atom by atom", "one atom at a time", "ultra-flat", "super flat", "flat", "flatter", "smoother", "uniform", "ALD", "PVD", "less than 2%", "under 2%", "mass production", "large-area", "large-scale", "HVLP", "HVLP copper foil", "copper foil", "glass", "copper-coated glass", "glass substrates", "TGV", "adhesion layer", "FCCL", "FPCBs", "flexible circuit boards", "chip packaging", "semiconductor packaging", "NVIDIA", "Vera Rubin", "4th-gen", "4th-generation", "6th-gen", "6th-generation", "four times", "ten times", "recurring revenue", "repeat orders", "repeat sales", "revenue", "revenue streams", "licenses", "license", "licensing", "single-crystal copper targets", "targets", "cables", "scaling", "scaling up", "scale", "Nature", "Nature Communications", "Advanced Materials", "CES Innovation Awards", "CES Innovation Award", "validation", "validated", "proof", "materials", "customers", "partners", "production", "capital", "funding", "commercialization", "commercialize", "business", "faster", "efficient"];
+const KEY_KO = ["씨아이티","AI 가속기 보드", "차세대 AI", "AI 인프라", "AI 칩", "AI 가속기", "AI 하드웨어", "데이터센터", "데이터 전송", "전력", "구리", "동박", "표면 거칠기", "거칠기", "거칩니다", "거친 표면", "결정립계", "발열", "신호 지연", "신호 손실", "신호 이동 거리", "전자 산란", "ASE", "원자 단위", "초평탄", "평탄", "균일", "ALD", "PVD", "대면적", "HVLP", "유리기판", "TGV", "접착층", "FCCL", "FPCB", "NVIDIA", "Vera Rubin", "4세대", "6세대", "반복매출", "라이선스", "단결정 구리 타겟", "단결정 구리 케이블", "스케일업", "Nature", "Nature Communications", "Advanced Materials", "CES 혁신상", "2년 연속", "검증", "고객사", "협력사", "소재", "사업화", "자금 조달", "생산", "첨단", "구리 회로의 품질", "하이브리드", "2% 미만", "매출"];
+const NUM = "\\d[\\d.,:%]*(?:\\s?(?:million|dollars|micrometers|억원|마이크로미터|배|년))?";
+const reOf = (list, bounded) => {
+  const alts = list.slice().sort((a, b) => b.length - a.length).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  return bounded ? new RegExp(`(?<![\\p{L}\\p{N}])(?:${alts}|${NUM})(?![\\p{L}\\p{N}])`, "giu") : new RegExp(`(?:${alts}|${NUM})`, "gu");
+};
+const RE_EN = reOf(KEY_EN, true), RE_KO = reOf(KEY_KO, false);
+function hl(text) {
+  const re = /[가-힣]/.test(text) ? RE_KO : RE_EN;
+  let out = "", last = 0;
+  for (const m of text.matchAll(re)) {
+    out += esc(text.slice(last, m.index)) + `<mark class="kw">${esc(m[0])}</mark>`;
+    last = m.index + m[0].length;
+  }
+  return out + esc(text.slice(last));
+}
+const ezHtml = c => `<div class="ez"><b>쉽게 말하면</b> ${hl(c.ez)}</div>`;
 // 표현 노트: 문장마다 [짧게, 다른 표현, 격식 있게]
 const VARIANTS = {
  "1P": [
@@ -780,7 +799,7 @@ const OPTS = [["orig", "원문"], ["ez", "쉬운 말"], ["short", "짧게"], ["a
 const optText = (c, k) => k === "orig" ? c.en : k === "ez" ? c.ez : VARIANTS[c.p][c.n - 1][["short", "alt", "formal"].indexOf(k)];
 const myKey = c => picks[c.id] || "ez";                         // 안 골랐으면 쉬운 말
 const EN = c => state.ver === "ez" ? c.ez : state.ver === "mine" ? optText(c, myKey(c)) : c.en;   // 지금 외우는 영어
-const subHtml = c => state.ver === "orig" ? ezHtml(c) : `<div class="ez"><b>원문</b> ${esc(c.en)}</div>`;
+const subHtml = c => state.ver === "orig" ? ezHtml(c) : `<div class="ez"><b>원문</b> ${hl(c.en)}</div>`;
 
 // 문장 단위 카드 목록
 const CARDS = [];
@@ -868,11 +887,11 @@ function renderCard() {
     <div class="card-top"><span><b class="mono">${c.p}</b> ${esc(c.t)} · 문장 ${c.n}/${c.total}</span>${tag}</div>
     <div>
       <div class="lang">${frontLang === "ko" ? "한국어" : "English"}</div>
-      <div class="front">${esc(c[frontLang])}</div>
+      <div class="front">${hl(c[frontLang])}</div>
     </div>
     ${state.hint && !state.flipped ? `<div><div class="lang">힌트 · 첫 글자</div><div class="hint">${esc(hintOf(c[backLang]))}</div></div>` : ""}
     ${state.flipped
-      ? `<div class="back"><div class="lang">${backLang === "ko" ? "한국어" : "English"}</div><div class="text">${esc(c[backLang])}</div>${subHtml(c0)}</div>`
+      ? `<div class="back"><div class="lang">${backLang === "ko" ? "한국어" : "English"}</div><div class="text">${hl(c[backLang])}</div>${subHtml(c0)}</div>`
       : `<div class="tap">머릿속으로 말해본 뒤 카드를 눌러 확인하세요</div>`}
   `;
   $("counter").textContent = `${state.idx + 1} / ${d.length}`;
@@ -967,7 +986,7 @@ function renderScript() {
   box.innerHTML = PAGES.filter(pg => state.pages.has(pg.p)).map(pg => `
     <details open>
       <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
-      <ol>${pg.en.map((en, i) => `<li>${(c => `<div class="en">${esc(EN(c))}${subHtml(c)}</div>`)(CARDS.find(x => x.id === pg.p + "-" + (i + 1)))}<div class="ko">${esc(pg.ko[i])}</div></li>`).join("")}</ol>
+      <ol>${pg.en.map((en, i) => `<li>${(c => `<div class="en">${hl(EN(c))}${subHtml(c)}</div>`)(CARDS.find(x => x.id === pg.p + "-" + (i + 1)))}<div class="ko">${hl(pg.ko[i])}</div></li>`).join("")}</ol>
     </details>`).join("");
 }
 $("script").addEventListener("click", e => {
@@ -1017,10 +1036,10 @@ function renderNote() {
         const mine = picks[c.id];
         const opts = noteMine ? [[myKey(c), ""]] : OPTS;
         return `<div class="note-s">
-          <div class="note-ko">${c.n}. ${esc(c.ko)}</div>
+          <div class="note-ko">${c.n}. ${hl(c.ko)}</div>
           ${opts.map(([k, label]) => `<div class="opt${!noteMine && mine === k ? " picked" : ""}">
             ${noteMine ? "" : `<span class="k">${label}</span>`}
-            <span class="t">${esc(optText(c, k))}</span>
+            <span class="t">${hl(optText(c, k))}</span>
             <span class="b"><button data-say="${c.id}|${k}">듣기</button>${noteMine ? "" : `<button class="pick" data-pick="${c.id}|${k}">${mine === k ? "내 것 ✓" : "내 것"}</button>`}</span>
           </div>`).join("")}
         </div>`;
@@ -1147,7 +1166,7 @@ function renderLearn() {
   let body = "", bank = "", foot = "";
 
   if (st === 0) {
-    body = `<div><div class="lang">English</div><div class="en-full">${keyHtml(EN(c))}</div>${subHtml(c)}</div>`;
+    body = `<div><div class="lang">English</div><div class="en-full">${hl(EN(c))}</div>${subHtml(c)}</div>`;
     foot = `<div class="lrow"><button id="lSpeak">듣기</button><button class="primary" id="lNext">외웠어요, 다음 단계로</button></div>`;
   } else {
     let ans = "";
@@ -1180,7 +1199,7 @@ function renderLearn() {
     <div class="card lcard">
       <div class="card-top"><span><b class="mono">${c.p}</b> ${esc(c.t)} · 문장 ${c.n}/${c.total}</span></div>
       <div class="stages">${pills}</div>
-      <div><div class="lang">한국어</div><div class="front">${esc(c.ko)}</div></div>
+      <div><div class="lang">한국어</div><div class="front">${hl(c.ko)}</div></div>
       ${body}
     </div>
     ${bank}${foot}`;
