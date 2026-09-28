@@ -125,6 +125,35 @@
 
   .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 
+  /* 단계 학습 */
+  .learn { display: flex; flex-direction: column; gap: 12px; }
+  .stages { display: flex; gap: 4px; flex-wrap: wrap; }
+  .stages span { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .stages span.on { background: var(--copper); border-color: var(--copper); color: var(--surface); font-weight: 600; }
+  .stages span.ok { background: var(--patina-soft); border-color: var(--patina); color: var(--patina); }
+  .lcard { cursor: default; min-height: 0; }
+  .en-full { font-size: 19px; line-height: 1.55; color: var(--patina); font-weight: 500; }
+  .answer { min-height: 58px; border-bottom: 2px solid var(--line); padding-bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px 5px; align-items: center; font-size: 17px; line-height: 1.5; }
+  .answer .w { color: var(--ink); }
+  .answer .w.new { color: var(--copper); }
+  .answer .blank { display: inline-block; border-bottom: 2px solid var(--copper); min-width: 3em; height: 1.2em; }
+  .answer .blank.next { background: var(--copper-soft); border-radius: 3px 3px 0 0; }
+  .answer .filled { color: var(--copper); font-weight: 600; }
+  .answer .cursor { width: 2px; height: 1.2em; background: var(--copper); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .bank { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .bank button { background: var(--surface); border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 10px; padding: 8px 12px; font-size: 16px; }
+  .bank button:disabled { visibility: hidden; }
+  .bank button.wrong { border-color: var(--warn); color: var(--warn); background: var(--warn-soft); animation: shake .35s; }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  .feedback { border-radius: 10px; padding: 10px 14px; font-size: 14px; }
+  .feedback.good { background: var(--patina-soft); color: var(--patina); }
+  .feedback.retry { background: var(--warn-soft); color: var(--warn); }
+  .lrow { display: flex; gap: 8px; }
+  .lrow button { flex: 1; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 12px 8px; font-size: 14px; font-weight: 500; }
+  .lrow .primary { background: var(--ink); color: var(--surface); border-color: var(--ink); flex: 2; }
+  .lrow .ghost { color: var(--muted); }
+
   /* 전체 대본 보기 */
   .script { display: flex; flex-direction: column; gap: 10px; }
   .script details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
@@ -141,13 +170,13 @@
     .back { font-size: 17px; }
     .card { min-height: 260px; padding: 18px 16px; }
   }
-  @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } .answer .cursor, .bank button.wrong { animation: none; } }
 </style>
 
 <div class="wrap">
   <header>
     <h1>CIT 대본 암기카드</h1>
-    <p>한 문장씩 보고, 떠올리고, 뒤집어서 확인하세요.</p>
+    <p>보고 듣기 → 단어 배치 → 빈칸 채우기, 세 단계로 한 문장씩 외워요.</p>
   </header>
 
   <div class="flow" id="flow" aria-label="발표 흐름"></div>
@@ -156,11 +185,12 @@
     <div class="row">
       <span class="label">보기 방식</span>
       <div class="seg" role="group" aria-label="보기 방식">
-        <button id="viewCard" aria-pressed="true">카드</button>
+        <button id="viewLearn" aria-pressed="true">단계 학습</button>
+        <button id="viewCard" aria-pressed="false">복습 카드</button>
         <button id="viewScript" aria-pressed="false">전체 대본</button>
       </div>
     </div>
-    <div class="row">
+    <div class="row" id="frontRow">
       <span class="label">앞면</span>
       <div class="seg" role="group" aria-label="앞면 언어">
         <button id="frontKo" aria-pressed="true">한국어 → 영어</button>
@@ -179,8 +209,20 @@
     </div>
   </div>
 
+  <!-- 단계 학습 모드 -->
+  <section id="learnView" class="learn">
+    <div>
+      <div class="progress">
+        <span id="lCounter"></span>
+        <span class="mono" id="lPct"></span>
+      </div>
+      <div class="bar" style="margin-top:6px"><i id="lBar"></i></div>
+    </div>
+    <div id="learnBody" class="learn"></div>
+  </section>
+
   <!-- 카드 모드 -->
-  <section id="cardView" style="display:flex;flex-direction:column;gap:12px">
+  <section id="cardView" style="display:flex;flex-direction:column;gap:12px" hidden>
     <div>
       <div class="progress">
         <span class="mono" id="counter">0 / 0</span>
@@ -402,7 +444,7 @@ $("pageChips").addEventListener("click", e => {
   else if (state.pages.has(p)) { state.pages.delete(p); if (!state.pages.size) state.pages = new Set(PAGES.map(x => x.p)); }
   else state.pages.add(p);
   store.set("pages", [...state.pages]);
-  renderChips(); buildDeck(); renderScript();
+  renderChips(); buildDeck(); renderScript(); buildLearn();
 });
 
 function buildDeck() {
@@ -510,6 +552,11 @@ $("resetMarks").addEventListener("click", e => {
 
 // 키보드
 document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!$("learnView").hidden) {
+    if ((e.key === "Enter" || e.key === " ") && $("lNext")) { e.preventDefault(); $("lNext").click(); }
+    return;
+  }
   if (!$("scriptView").hidden || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); }
   else if (e.key === "ArrowRight") go(1);
@@ -554,18 +601,167 @@ $("hideEn").addEventListener("click", () => setHide("en"));
 $("hideKo").addEventListener("click", () => setHide("ko"));
 
 function setView(v) {
-  const isCard = v === "card";
-  $("cardView").hidden = !isCard; $("cardView").style.display = isCard ? "flex" : "none";
-  $("scriptView").hidden = isCard;
-  $("cardOptions").hidden = !isCard;
-  isCard ? setPressed("viewCard", ["viewScript"]) : setPressed("viewScript", ["viewCard"]);
+  $("learnView").hidden = v !== "learn";
+  $("cardView").hidden = v !== "card"; $("cardView").style.display = v === "card" ? "flex" : "none";
+  $("scriptView").hidden = v !== "script";
+  $("cardOptions").hidden = v !== "card";
+  $("frontRow").hidden = v !== "card";
+  const ids = { learn: "viewLearn", card: "viewCard", script: "viewScript" };
+  setPressed(ids[v], Object.values(ids).filter(i => i !== ids[v]));
+  store.set("view", v);
 }
+$("viewLearn").addEventListener("click", () => setView("learn"));
 $("viewCard").addEventListener("click", () => setView("card"));
 $("viewScript").addEventListener("click", () => setView("script"));
 
+// ===== 단계 학습 =====
+// progress[id]: 다음에 할 단계 (0 보고 듣기, 1 단어 배치, 2 빈칸), 3 = 완료
+const STAGES = ["보고 듣기", "단어 배치", "빈칸 채우기"];
+const learn = { progress: store.get("progress", {}), queue: [], cur: null, stage: 0, tokens: [], answer: [], chips: [], blanks: [], placed: 0, mistakes: 0, done: false };
+const stageOf = c => learn.progress[c.id] || 0;
+const shuffled = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const core = w => w.replace(/^[“"‘'(]+|[.,:;?!”"’')]+$/g, "");
+
+function speakText(t) {
+  if (!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(t); u.lang = "en-US"; u.rate = 0.95;
+  speechSynthesis.speak(u);
+}
+
+function buildLearn() {
+  learn.queue = CARDS.filter(c => state.pages.has(c.p) && stageOf(c) < 3);
+  nextTask();
+}
+
+function nextTask() {
+  learn.cur = learn.queue.shift() || null;
+  learn.placed = 0; learn.mistakes = 0; learn.done = false;
+  const c = learn.cur;
+  if (c) {
+    learn.stage = stageOf(c);
+    learn.tokens = c.en.split(/\s+/);
+    if (learn.stage === 1) {
+      learn.answer = learn.tokens.slice();
+      learn.chips = shuffled(learn.tokens.map((w, i) => ({ w, i })));
+    } else if (learn.stage === 2) {
+      const cand = learn.tokens.map((w, i) => i).filter(i => core(learn.tokens[i]).replace(/[^\p{L}\p{N}]/gu, "").length >= 3);
+      const pool = cand.length ? cand : learn.tokens.map((w, i) => i);
+      const n = Math.max(1, Math.round(pool.length * 0.5));
+      learn.blanks = shuffled(pool).slice(0, n).sort((a, b) => a - b);
+      learn.answer = learn.blanks.map(i => core(learn.tokens[i]));
+      const used = new Set(learn.answer.map(w => w.toLowerCase()));
+      const others = shuffled(CARDS.filter(x => x.id !== c.id).flatMap(x => x.en.split(/\s+/).map(core)))
+        .filter(w => w.length >= 4 && !used.has(w.toLowerCase()) && (used.add(w.toLowerCase()), true)).slice(0, 2);
+      learn.chips = shuffled([...learn.answer, ...others].map((w, i) => ({ w, i })));
+    }
+  }
+  renderLearn();
+}
+
+function renderLearnProgress() {
+  const scope = CARDS.filter(c => state.pages.has(c.p));
+  const sum = scope.reduce((a, c) => a + stageOf(c), 0);
+  const cnt = [0, 0, 0, 0]; scope.forEach(c => cnt[stageOf(c)]++);
+  $("lCounter").textContent = `보고 듣기 ${cnt[0]} · 단어 배치 ${cnt[1]} · 빈칸 ${cnt[2]} · 완료 ${cnt[3]}`;
+  const pct = scope.length ? Math.round(sum / (scope.length * 3) * 100) : 0;
+  $("lPct").textContent = pct + "%";
+  $("lBar").style.width = pct + "%";
+}
+
+function renderLearn() {
+  renderLearnProgress();
+  const box = $("learnBody"), c = learn.cur;
+  if (!c) {
+    box.innerHTML = `<div class="card lcard"><div class="empty">선택한 페이지의 문장을 모두 외웠어요!<br>‘복습 카드’로 점검하거나 처음부터 다시 연습해 보세요.</div></div>
+      <div class="lrow"><button class="primary" id="lRestart">이 페이지들 처음부터 다시</button></div>`;
+    $("lRestart").onclick = () => { CARDS.forEach(x => { if (state.pages.has(x.p)) delete learn.progress[x.id]; }); store.set("progress", learn.progress); buildLearn(); };
+    return;
+  }
+  const st = learn.stage;
+  const pills = STAGES.map((n, i) => `<span class="${i === st ? "on" : i < st ? "ok" : ""}">${i + 1} ${n}</span>`).join("");
+  let body = "", bank = "", foot = "";
+
+  if (st === 0) {
+    body = `<div><div class="lang">English</div><div class="en-full">${esc(c.en)}</div></div>`;
+    foot = `<div class="lrow"><button id="lSpeak">듣기</button><button class="primary" id="lNext">외웠어요, 다음 단계로</button></div>`;
+  } else {
+    let ans = "";
+    if (st === 1) {
+      ans = learn.tokens.slice(0, learn.placed).map((w, i) => `<span class="w${i === learn.placed - 1 ? " new" : ""}">${esc(w)}</span>`).join("") + (learn.done ? "" : '<span class="cursor"></span>');
+    } else {
+      let k = 0;
+      ans = learn.tokens.map((w, i) => {
+        if (i !== learn.blanks[k]) return `<span class="w">${esc(w)}</span>`;
+        const idx = k++, cw = core(w), rest = w.slice(w.indexOf(cw) + cw.length), lead = w.slice(0, w.indexOf(cw));
+        if (idx < learn.placed) return `<span class="w">${esc(lead)}<span class="filled">${esc(cw)}</span>${esc(rest)}</span>`;
+        return `<span class="w">${esc(lead)}<span class="blank${idx === learn.placed ? " next" : ""}" style="min-width:${Math.max(2.5, cw.length * 0.55)}em"></span>${esc(rest)}</span>`;
+      }).join("");
+    }
+    body = `<div><div class="lang">English</div><div class="answer">${ans}</div></div>`;
+    if (!learn.done) {
+      bank = `<div class="bank" id="bank">${learn.chips.map((ch, j) => `<button data-j="${j}"${ch.used ? " disabled" : ""}>${esc(ch.w)}</button>`).join("")}</div>`;
+      foot = `<div class="lrow"><button class="ghost" id="lGiveup">모르겠어요 (한 단어 보기)</button></div>`;
+    } else {
+      const ok = learn.mistakes === 0;
+      const msg = ok
+        ? (st === 2 ? "완벽해요! 이 문장은 완료했어요." : "정확해요! 다음엔 빈칸 채우기로 올라갑니다.")
+        : `실수 ${learn.mistakes}번. 조금 뒤에 이 단계를 한 번 더 해요.`;
+      foot = `<div class="feedback ${ok ? "good" : "retry"}">${msg}</div>
+        <div class="lrow"><button id="lSpeak">듣기</button><button class="primary" id="lNext">계속</button></div>`;
+    }
+  }
+
+  box.innerHTML = `
+    <div class="card lcard">
+      <div class="card-top"><span><b class="mono">${c.p}</b> ${esc(c.t)} · 문장 ${c.n}/${c.total}</span></div>
+      <div class="stages">${pills}</div>
+      <div><div class="lang">한국어</div><div class="front">${esc(c.ko)}</div></div>
+      ${body}
+    </div>
+    ${bank}${foot}`;
+
+  if ($("lSpeak")) $("lSpeak").onclick = () => speakText(c.en);
+  if ($("lNext")) $("lNext").onclick = finishTask;
+  if ($("lGiveup")) $("lGiveup").onclick = () => {
+    const want = learn.answer[learn.placed];
+    const ch = learn.chips.find(x => !x.used && x.w === want);
+    learn.mistakes++; place(ch);
+  };
+  if ($("bank")) $("bank").onclick = e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const ch = learn.chips[+b.dataset.j];
+    if (ch.w === learn.answer[learn.placed]) place(ch);
+    else {
+      learn.mistakes++;
+      b.classList.remove("wrong"); void b.offsetWidth; b.classList.add("wrong");
+    }
+  };
+}
+
+function place(ch) {
+  if (ch) ch.used = true;
+  learn.placed++;
+  if (learn.placed >= learn.answer.length) { learn.done = true; speakText(learn.cur.en); }
+  renderLearn();
+}
+
+function finishTask() {
+  const c = learn.cur; if (!c) return;
+  if (learn.stage === 0 || learn.mistakes === 0) {
+    learn.progress[c.id] = learn.stage + 1;
+    store.set("progress", learn.progress);
+  }
+  // 아직 안 끝난 문장은 두 문장 뒤에 다시 등장
+  if (stageOf(c) < 3) learn.queue.splice(Math.min(2, learn.queue.length), 0, c);
+  nextTask();
+}
+
 // 시작
 setFront(state.front);
+setView(store.get("view", "learn"));
 renderChips();
+buildLearn();
 buildDeck();
 renderScript();
 </script>
