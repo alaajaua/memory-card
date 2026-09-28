@@ -1,0 +1,571 @@
+<title>CIT 대본 암기카드</title>
+<meta name="description" content="CIT 발표 대본을 한 문장씩 한국어/영어 플래시카드로 외우는 도구">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #eef2f3;
+    --surface: #ffffff;
+    --ink: #172024;
+    --muted: #5c6b71;
+    --line: #d5dde0;
+    --copper: #a8552a;
+    --copper-soft: #f4e3d8;
+    --patina: #1f6b64;
+    --patina-soft: #dcefec;
+    --warn: #b23b3b;
+    --warn-soft: #f7e1e1;
+    --shadow: 0 1px 2px rgba(20, 35, 40, .06), 0 8px 24px rgba(20, 35, 40, .07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #11171a;
+      --surface: #1a2226;
+      --ink: #e6ecee;
+      --muted: #93a3a9;
+      --line: #2c383d;
+      --copper: #e39061;
+      --copper-soft: #3a2a21;
+      --patina: #6cc3b8;
+      --patina-soft: #1d3533;
+      --warn: #ee8a8a;
+      --warn-soft: #3a2224;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #11171a;
+    --surface: #1a2226;
+    --ink: #e6ecee;
+    --muted: #93a3a9;
+    --line: #2c383d;
+    --copper: #e39061;
+    --copper-soft: #3a2a21;
+    --patina: #6cc3b8;
+    --patina-soft: #1d3533;
+    --warn: #ee8a8a;
+    --warn-soft: #3a2224;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    padding-inline: 16px;
+    padding-block: 20px 40px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  header h1 { margin: 0; font-size: 22px; font-weight: 700; text-wrap: balance; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+  .flow { display: flex; flex-wrap: wrap; gap: 4px 2px; align-items: center; font-size: 12px; color: var(--muted); }
+  .flow span.step { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: var(--ink); }
+  .flow span.arrow { color: var(--copper); padding: 0 2px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); min-width: 64px; }
+
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { background: transparent; border: 0; padding: 6px 12px; font-size: 13px; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; }
+  .chip[aria-pressed="true"] { background: var(--copper-soft); border-color: var(--copper); color: var(--copper); font-weight: 600; }
+  .toggle { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+  .toggle[aria-pressed="true"] { background: var(--patina-soft); border-color: var(--patina); color: var(--patina); font-weight: 600; }
+
+  .progress { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); gap: 8px; }
+  .bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--copper); width: 0; transition: width .25s; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+    padding: 22px 20px; min-height: 300px; display: flex; flex-direction: column; gap: 16px; cursor: pointer;
+    user-select: none; -webkit-user-select: none; touch-action: pan-y;
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12px; color: var(--muted); }
+  .card-top b { color: var(--copper); font-weight: 500; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; }
+  .tag.known { background: var(--patina-soft); color: var(--patina); }
+  .tag.again { background: var(--warn-soft); color: var(--warn); }
+  .lang { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .front { font-size: 21px; font-weight: 600; line-height: 1.5; text-wrap: pretty; }
+  .hint { font-size: 17px; color: var(--copper); letter-spacing: .02em; line-height: 1.6; word-break: keep-all; }
+  .back { border-top: 1px dashed var(--line); padding-top: 14px; font-size: 18px; line-height: 1.55; text-wrap: pretty; }
+  .back .text { color: var(--patina); font-weight: 500; }
+  .tap { margin-top: auto; text-align: center; font-size: 13px; color: var(--muted); }
+
+  .actions { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; }
+  .actions button, .grade button {
+    border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 12px 8px; font-size: 14px; font-weight: 500;
+  }
+  .actions .primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grade .again { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+  .grade .known { color: var(--patina); border-color: var(--patina); background: var(--patina-soft); }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .tools button { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 13px; color: var(--muted); }
+  .keys { text-align: center; font-size: 12px; color: var(--muted); }
+  .keys kbd { font-family: "IBM Plex Mono", monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; font-size: 11px; }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+
+  /* 전체 대본 보기 */
+  .script { display: flex; flex-direction: column; gap: 10px; }
+  .script details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+  .script summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  .script summary .mono { color: var(--copper); margin-right: 6px; font-size: 12px; }
+  .script ol { margin: 10px 0 4px; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .script li .en { font-weight: 500; }
+  .script li .ko { color: var(--muted); font-size: 14px; }
+  .script.hide-en li .en, .script.hide-ko li .ko { filter: blur(6px); cursor: pointer; transition: filter .15s; }
+  .script li .revealed { filter: none !important; }
+
+  @media (max-width: 480px) {
+    .front { font-size: 19px; }
+    .back { font-size: 17px; }
+    .card { min-height: 260px; padding: 18px 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>CIT 대본 암기카드</h1>
+    <p>한 문장씩 보고, 떠올리고, 뒤집어서 확인하세요.</p>
+  </header>
+
+  <div class="flow" id="flow" aria-label="발표 흐름"></div>
+
+  <div class="panel">
+    <div class="row">
+      <span class="label">보기 방식</span>
+      <div class="seg" role="group" aria-label="보기 방식">
+        <button id="viewCard" aria-pressed="true">카드</button>
+        <button id="viewScript" aria-pressed="false">전체 대본</button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="label">앞면</span>
+      <div class="seg" role="group" aria-label="앞면 언어">
+        <button id="frontKo" aria-pressed="true">한국어 → 영어</button>
+        <button id="frontEn" aria-pressed="false">English → 한국어</button>
+      </div>
+    </div>
+    <div class="row" style="align-items:flex-start">
+      <span class="label" style="padding-top:4px">페이지</span>
+      <div class="chips" id="pageChips"></div>
+    </div>
+    <div class="row" id="cardOptions">
+      <span class="label">옵션</span>
+      <button class="toggle" id="shuffle" aria-pressed="false">섞기</button>
+      <button class="toggle" id="onlyAgain" aria-pressed="false">못 외운 것만</button>
+      <button class="toggle" id="resetMarks" aria-pressed="false">기록 초기화</button>
+    </div>
+  </div>
+
+  <!-- 카드 모드 -->
+  <section id="cardView" style="display:flex;flex-direction:column;gap:12px">
+    <div>
+      <div class="progress">
+        <span class="mono" id="counter">0 / 0</span>
+        <span id="stats"></span>
+      </div>
+      <div class="bar" style="margin-top:6px"><i id="barFill"></i></div>
+    </div>
+
+    <div class="card" id="card" tabindex="0" aria-live="polite"></div>
+
+    <div class="grade" id="grade" hidden>
+      <button class="again" id="btnAgain">다시 볼래요</button>
+      <button class="known" id="btnKnown">외웠어요</button>
+    </div>
+    <div class="actions">
+      <button id="btnPrev">← 이전</button>
+      <button class="primary" id="btnFlip">정답 보기</button>
+      <button id="btnNext">다음 →</button>
+    </div>
+    <div class="tools">
+      <button id="btnHint">첫 글자 힌트</button>
+      <button id="btnSpeak">영어 듣기</button>
+    </div>
+    <div class="keys"><kbd>Space</kbd> 뒤집기 · <kbd>←</kbd><kbd>→</kbd> 이동 · <kbd>H</kbd> 힌트 · <kbd>1</kbd> 다시 · <kbd>2</kbd> 외웠어요 · 모바일은 좌우로 밀기</div>
+  </section>
+
+  <!-- 전체 대본 모드 -->
+  <section id="scriptView" hidden>
+    <div class="row" style="margin-bottom:10px">
+      <span class="label">가리기</span>
+      <div class="seg" role="group" aria-label="가리기">
+        <button id="hideNone" aria-pressed="true">안 가림</button>
+        <button id="hideEn" aria-pressed="false">영어 가리기</button>
+        <button id="hideKo" aria-pressed="false">한국어 가리기</button>
+      </div>
+    </div>
+    <div class="script" id="script"></div>
+  </section>
+</div>
+
+<script>
+const FLOW = ["AI 성장", "전력 문제", "구리의 한계", "표면 거칠기·결정립계", "ASE 기술", "평탄한 구리", "더 빠른 데이터 전송", "다양한 산업 적용"];
+
+const PAGES = [
+  { p: "1P", t: "Company Introduction", en: [
+    "CIT is an advanced IT materials company for next-generation AI.",
+    "Today, I’ll briefly introduce our technology and where it creates value in AI infrastructure."
+  ], ko: [
+    "씨아이티는 차세대 AI를 위한 첨단 IT 소재 기업입니다.",
+    "오늘은 씨아이티의 기술과 AI 인프라에서 이 기술이 어떤 가치를 창출하는지 간략히 소개하겠습니다."
+  ]},
+  { p: "2P", t: "Global Validation", en: [
+    "Before the technology, let me start with validation.",
+    "CIT’s research has been published in Nature, Nature Communications, and Advanced Materials.",
+    "Our technology has also received CES Innovation Awards in 2025 and 2026.",
+    "Now, let’s look at the problem we are solving in AI infrastructure."
+  ], ko: [
+    "기술을 설명하기에 앞서, 검증 성과부터 말씀드리겠습니다.",
+    "씨아이티의 연구 성과는 Nature, Nature Communications, Advanced Materials에 게재됐습니다.",
+    "또한 CES 혁신상을 2025년과 2026년 2년 연속 수상했습니다.",
+    "이제 AI 인프라에서 저희가 해결하고자 하는 문제를 살펴보겠습니다."
+  ]},
+  { p: "3P", t: "Energy Problem", en: [
+    "So, what is really limiting AI infrastructure expansion?",
+    "Is it a shortage of AI chips?",
+    "No the real problem is Energy.",
+    "Energy is becoming a major challenge for data center expansion."
+  ], ko: [
+    "AI 인프라 확장을 제약하는 것은 무엇일까요?",
+    "AI 칩 부족일까요?",
+    "핵심은 전력 문제입니다.",
+    "전력은 데이터센터의 확장을 제약하는 주요 문제로 부각되고 있습니다."
+  ]},
+  { p: "4P", t: "Copper Problem", en: [
+    "This Energy Challenge brings us to copper, a key material for data transmission in AI hardware.",
+    "Conventional copper surfaces are rough.",
+    "This can increase heat and signal delay, limiting AI accelerator performance."
+  ], ko: [
+    "이 전력 문제는 AI 하드웨어에서 핵심 데이터 전송 소재인 구리와 연결됩니다.",
+    "기존 구리는 표면이 거칩니다.",
+    "이것은 발열과 신호 지연을 증가시켜 AI 가속기의 성능을 제한할 수 있습니다."
+  ]},
+  { p: "5P", t: "Root Cause", en: [
+    "This is why Copper Circuit Quality matters.",
+    "Two factors are important here: surface roughness and grain boundaries.",
+    "A rough surface makes the signal path longer, and Grain Boundaries increase electron scattering.",
+    "Together, they increase signal loss and heat."
+  ], ko: [
+    "그렇기 때문에 구리 회로의 품질이 중요합니다.",
+    "핵심 요인은 표면 거칠기와 결정립계입니다.",
+    "거친 표면은 신호 이동 거리를 늘리고, 결정립계는 전자 산란을 증가시킵니다.",
+    "두 요인 모두 신호 손실과 발열을 증가시킵니다."
+  ]},
+  { p: "6P", t: "ASE Solution", en: [
+    "To solve this, we developed ASE, or Atomic Sputtering Epitaxy.",
+    "ASE deposits copper atom by atom, creating an ultra-flat, highly uniform copper thin film.",
+    "By making the copper surface much flatter, ASE directly addresses the signal-loss and heat problem we just discussed."
+  ], ko: [
+    "이를 해결하기 위해 ASE, Atomic Sputtering Epitaxy 기술을 개발했습니다.",
+    "ASE는 구리를 원자 단위로 증착해 초평탄하고 매우 균일한 구리 박막을 형성합니다.",
+    "구리 표면을 훨씬 평탄하게 만들어, 앞서 말씀드린 신호 손실과 발열을 줄입니다."
+  ]},
+  { p: "7P", t: "ASE Characteristics", en: [
+    "ASE combines the advantages of ALD and PVD to make flat, uniform copper films at high speed.",
+    "It is ready for large-area industrial production.",
+    "And Existing PVD equipment can be upgraded easily, with less than 2% additional equipment cost."
+  ], ko: [
+    "ASE는 ALD와 PVD의 장점을 결합한 하이브리드 공정으로, 평탄하고 균일한 구리 박막을 빠르게 형성합니다.",
+    "또한 대면적 산업 생산에 적용할 준비를 갖췄고,",
+    "기존 PVD 장비의 업그레이드가 용이하며 추가 설비 비용도 2% 미만으로 가능합니다."
+  ]},
+  { p: "8P", t: "Applications", en: [
+    "We apply ASE across multiple applications.",
+    "HVLP copper foil for accelerator boards Copper-coated glass for semiconductor packaging.",
+    "And FCCL for High-Speed data transmission in FPCBs."
+  ], ko: [
+    "ASE는 다양한 분야에 적용됩니다.",
+    "AI 가속기 보드용 HVLP 동박, 반도체 패키징용 구리 증착 유리기판,",
+    "FPCB의 고속 데이터 전송을 위한 FCCL입니다."
+  ]},
+  { p: "9P", t: "AI Accelerator / HVLP Copper", en: [
+    "First, the AI accelerator board.",
+    "Compared with the 4th-generation HVLP copper used for NVIDIA’s Vera Rubin platform, CIT ASE copper reaches a 6th-generation level.",
+    "The surface roughness is reduced from about 0.8 micrometers to 0.2 micrometers, up to about four times lower."
+  ], ko: [
+    "첫 번째는 AI 가속기 보드입니다.",
+    "NVIDIA의 Vera Rubin 플랫폼에 사용되는 HVLP 4세대 동박 대비, 씨아이티의 ASE 동박은 HVLP 6세대 수준의 성능을 확보했습니다.",
+    "표면 거칠기는 약 0.8마이크로미터에서 0.2마이크로미터로 낮아져 최대 약 4배의 평탄도 개선을 보입니다."
+  ]},
+  { p: "10P", t: "Glass Substrate / TGV", en: [
+    "Second, glass substrate.",
+    "We have validated our technology with multiple glass uniform TGV coverage at an 8:1 aspect ratio,",
+    "and direct copper deposition on glass without an adhesion layer."
+  ], ko: [
+    "두 번째는 유리기판입니다.",
+    "코닝, 아사히, 쇼트 여러 종류의 유리기판에서 기술을 검증했고 종횡비 8:1의 TGV에도 구리를 균일하게 증착했습니다.",
+    "또한 유리 표면에 구리를 직접 증착해 기존 공정에서 필수이던 접착층을 제거했습니다."
+  ]},
+  { p: "11P", t: "FCCL", en: [
+    "Third. FCCL",
+    "Our FCCL is ten times flatter than Conventional FCCL.",
+    "And it is already generating recurring revenue."
+  ], ko: [
+    "세 번째는 FCCL입니다.",
+    "씨아이티의 FCCL은 기존 FCCL 대비 평탄도가 10배 우수합니다.",
+    "FCCL은 이미 반복매출이 발생하고 있습니다."
+  ]},
+  { p: "12P", t: "Revenue Stream", en: [
+    "ASE gives us several revenue streams, including deposited products, ASE licenses, Single-crystal copper targets, and cables."
+  ], ko: [
+    "ASE 기술은 증착제품군뿐 아니라 ASE 기술 라이선스, 단결정 구리 타겟, 단결정 구리 케이블 등 다양한 매출구조를 만들어 냅니다."
+  ]},
+  { p: "13P", t: "KPI & Milestone", en: [
+    "We are now moving from technical validation to scaling.",
+    "Our customers and partners continue to expand.",
+    "Based on our current roadmap, revenue grows from about 6 million dollars in this year to 28 million in next year, 88 million in 2028."
+  ], ko: [
+    "씨아이티는 기술 검증에서 스케일업 단계로 나아가고 있습니다.",
+    "고객사와 협력사도 지속적으로 확대되고 있습니다.",
+    "현재 로드맵에 따른 매출 목표는 2026년 80억원, 2027년 375억원, 2028년 1,185억원입니다."
+  ]},
+  { p: "14P", t: "Team", en: [
+    "Our team combines deep materials technology with commercialization experience.",
+    "Our research leadership brings long-term copper expertise, while management, sales, and investment experience connect that technology to customers, production, and capital."
+  ], ko: [
+    "씨아이티의 팀은 소재 기술 전문성과 사업화 경험을 갖추고 있습니다.",
+    "연구진은 오랜 구리 연구 경험을 바탕으로 기술을 이끌고 있고, 경영·영업·투자 분야의 경험은 그 기술을 고객, 생산, 자금 조달로 연결합니다."
+  ]},
+  { p: "15P", t: "Closing", en: [
+    "CIT is building advanced copper materials for the next generation of AI.",
+    "Our goal is simple: flatter copper for Faster, more efficient data transmission.",
+    "Thank you."
+  ], ko: [
+    "씨아이티는 차세대 AI를 위한 첨단 구리 소재를 개발하고 있습니다.",
+    "목표는 명확합니다. 더 평탄한 구리로 더 빠르고 효율적인 데이터 전송을 구현하는 것입니다.",
+    "감사합니다."
+  ]}
+];
+
+// 문장 단위 카드 목록
+const CARDS = [];
+PAGES.forEach(pg => pg.en.forEach((en, i) => CARDS.push({
+  id: pg.p + "-" + (i + 1), p: pg.p, t: pg.t, n: i + 1, total: pg.en.length, en, ko: pg.ko[i]
+})));
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("cit-cards:" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("cit-cards:" + k, JSON.stringify(v)); } catch (e) {} }
+};
+
+const state = {
+  front: store.get("front", "ko"),
+  pages: new Set(store.get("pages", PAGES.map(p => p.p))),
+  shuffle: false,
+  onlyAgain: false,
+  marks: store.get("marks", {}), // id -> "known" | "again"
+  deck: [], idx: 0, flipped: false, hint: false
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// 흐름 표시
+$("flow").innerHTML = FLOW.map(s => `<span class="step">${s}</span>`).join('<span class="arrow">→</span>');
+
+// 페이지 칩
+function renderChips() {
+  const all = state.pages.size === PAGES.length;
+  $("pageChips").innerHTML =
+    `<button class="chip" data-p="ALL" aria-pressed="${all}">전체</button>` +
+    PAGES.map(pg => `<button class="chip mono" data-p="${pg.p}" title="${esc(pg.t)}" aria-pressed="${!all && state.pages.has(pg.p)}">${pg.p}</button>`).join("");
+}
+$("pageChips").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const p = b.dataset.p;
+  const all = state.pages.size === PAGES.length;
+  if (p === "ALL") state.pages = new Set(PAGES.map(x => x.p));
+  else if (all) state.pages = new Set([p]);          // 전체 상태에서 누르면 그 페이지만
+  else if (state.pages.has(p)) { state.pages.delete(p); if (!state.pages.size) state.pages = new Set(PAGES.map(x => x.p)); }
+  else state.pages.add(p);
+  store.set("pages", [...state.pages]);
+  renderChips(); buildDeck(); renderScript();
+});
+
+function buildDeck() {
+  let d = CARDS.filter(c => state.pages.has(c.p));
+  if (state.onlyAgain) d = d.filter(c => state.marks[c.id] !== "known");
+  if (state.shuffle) {
+    d = d.slice();
+    for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
+  }
+  state.deck = d; state.idx = 0; state.flipped = false; state.hint = false;
+  renderCard();
+}
+
+function hintOf(text) {
+  // 단어마다 첫 글자만 남기기 (숫자는 그대로)
+  return text.split(/\s+/).map(w => {
+    const m = w.match(/^([^\p{L}\p{N}]*)([\p{L}\p{N}])([\p{L}\p{N}.,:’'%\-·]*?)([^\p{L}\p{N}]*)$/u);
+    if (!m) return w;
+    if (/^\d/.test(m[2])) return w;
+    return m[1] + m[2] + m[4];
+  }).join(" ");
+}
+
+function renderCard() {
+  const d = state.deck, card = $("card");
+  const known = CARDS.filter(c => state.pages.has(c.p) && state.marks[c.id] === "known").length;
+  const inScope = CARDS.filter(c => state.pages.has(c.p)).length;
+  $("stats").textContent = `외운 문장 ${known} / ${inScope}`;
+  if (!d.length) {
+    card.innerHTML = `<div class="empty">${state.onlyAgain ? "모두 외웠어요! ‘못 외운 것만’을 끄면 전체를 다시 볼 수 있어요." : "선택한 페이지에 문장이 없어요."}</div>`;
+    $("counter").textContent = "0 / 0"; $("barFill").style.width = "0";
+    $("grade").hidden = true; return;
+  }
+  const c = d[state.idx];
+  const frontLang = state.front, backLang = frontLang === "ko" ? "en" : "ko";
+  const mark = state.marks[c.id];
+  const tag = mark === "known" ? '<span class="tag known">외움</span>' : mark === "again" ? '<span class="tag again">다시</span>' : "";
+  card.innerHTML = `
+    <div class="card-top"><span><b class="mono">${c.p}</b> ${esc(c.t)} · 문장 ${c.n}/${c.total}</span>${tag}</div>
+    <div>
+      <div class="lang">${frontLang === "ko" ? "한국어" : "English"}</div>
+      <div class="front">${esc(c[frontLang])}</div>
+    </div>
+    ${state.hint && !state.flipped ? `<div><div class="lang">힌트 · 첫 글자</div><div class="hint">${esc(hintOf(c[backLang]))}</div></div>` : ""}
+    ${state.flipped
+      ? `<div class="back"><div class="lang">${backLang === "ko" ? "한국어" : "English"}</div><div class="text">${esc(c[backLang])}</div></div>`
+      : `<div class="tap">머릿속으로 말해본 뒤 카드를 눌러 확인하세요</div>`}
+  `;
+  $("counter").textContent = `${state.idx + 1} / ${d.length}`;
+  $("barFill").style.width = ((state.idx + 1) / d.length * 100) + "%";
+  $("btnFlip").textContent = state.flipped ? "정답 가리기" : "정답 보기";
+  $("grade").hidden = !state.flipped;
+}
+
+function flip() { if (!state.deck.length) return; state.flipped = !state.flipped; renderCard(); }
+function go(delta) {
+  if (!state.deck.length) return;
+  state.idx = (state.idx + delta + state.deck.length) % state.deck.length;
+  state.flipped = false; state.hint = false; renderCard();
+}
+function grade(v) {
+  const c = state.deck[state.idx]; if (!c) return;
+  state.marks[c.id] = v; store.set("marks", state.marks);
+  if (state.onlyAgain && v === "known") {
+    state.deck.splice(state.idx, 1);
+    if (state.idx >= state.deck.length) state.idx = 0;
+    state.flipped = false; state.hint = false; renderCard();
+  } else go(1);
+}
+function speak() {
+  const c = state.deck[state.idx]; if (!c || !("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(c.en); u.lang = "en-US"; u.rate = 0.95;
+  speechSynthesis.speak(u);
+}
+
+$("card").addEventListener("click", flip);
+$("btnFlip").addEventListener("click", flip);
+$("btnPrev").addEventListener("click", () => go(-1));
+$("btnNext").addEventListener("click", () => go(1));
+$("btnAgain").addEventListener("click", () => grade("again"));
+$("btnKnown").addEventListener("click", () => grade("known"));
+$("btnHint").addEventListener("click", () => { state.hint = !state.hint; renderCard(); });
+$("btnSpeak").addEventListener("click", speak);
+
+function setPressed(onId, offIds) { $(onId).setAttribute("aria-pressed", "true"); offIds.forEach(i => $(i).setAttribute("aria-pressed", "false")); }
+function setFront(f) {
+  state.front = f; store.set("front", f);
+  f === "ko" ? setPressed("frontKo", ["frontEn"]) : setPressed("frontEn", ["frontKo"]);
+  state.flipped = false; state.hint = false; renderCard();
+}
+$("frontKo").addEventListener("click", () => setFront("ko"));
+$("frontEn").addEventListener("click", () => setFront("en"));
+
+$("shuffle").addEventListener("click", e => { state.shuffle = !state.shuffle; e.currentTarget.setAttribute("aria-pressed", state.shuffle); buildDeck(); });
+$("onlyAgain").addEventListener("click", e => { state.onlyAgain = !state.onlyAgain; e.currentTarget.setAttribute("aria-pressed", state.onlyAgain); buildDeck(); });
+
+let resetArmed = false;
+$("resetMarks").addEventListener("click", e => {
+  const b = e.currentTarget;
+  if (!resetArmed) { resetArmed = true; b.textContent = "한 번 더 누르면 초기화"; setTimeout(() => { resetArmed = false; b.textContent = "기록 초기화"; }, 3000); return; }
+  resetArmed = false; b.textContent = "기록 초기화";
+  state.marks = {}; store.set("marks", {}); buildDeck();
+});
+
+// 키보드
+document.addEventListener("keydown", e => {
+  if (!$("scriptView").hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); }
+  else if (e.key === "ArrowRight") go(1);
+  else if (e.key === "ArrowLeft") go(-1);
+  else if (e.key === "h" || e.key === "H") { state.hint = !state.hint; renderCard(); }
+  else if (e.key === "1" && state.flipped) grade("again");
+  else if (e.key === "2" && state.flipped) grade("known");
+});
+
+// 모바일 스와이프
+let sx = null, sy = null;
+$("card").addEventListener("touchstart", e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+$("card").addEventListener("touchend", e => {
+  if (sx == null) return;
+  const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) { go(dx < 0 ? 1 : -1); e.preventDefault(); }
+  sx = null;
+});
+
+// 전체 대본 보기
+let hideMode = "none";
+function renderScript() {
+  const box = $("script");
+  box.className = "script" + (hideMode === "en" ? " hide-en" : hideMode === "ko" ? " hide-ko" : "");
+  box.innerHTML = PAGES.filter(pg => state.pages.has(pg.p)).map(pg => `
+    <details open>
+      <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
+      <ol>${pg.en.map((en, i) => `<li><div class="en">${esc(en)}</div><div class="ko">${esc(pg.ko[i])}</div></li>`).join("")}</ol>
+    </details>`).join("");
+}
+$("script").addEventListener("click", e => {
+  const t = e.target.closest(".en, .ko"); if (t) t.classList.toggle("revealed");
+});
+function setHide(m) {
+  hideMode = m;
+  const ids = { none: "hideNone", en: "hideEn", ko: "hideKo" };
+  setPressed(ids[m], Object.values(ids).filter(i => i !== ids[m]));
+  renderScript();
+}
+$("hideNone").addEventListener("click", () => setHide("none"));
+$("hideEn").addEventListener("click", () => setHide("en"));
+$("hideKo").addEventListener("click", () => setHide("ko"));
+
+function setView(v) {
+  const isCard = v === "card";
+  $("cardView").hidden = !isCard; $("cardView").style.display = isCard ? "flex" : "none";
+  $("scriptView").hidden = isCard;
+  $("cardOptions").hidden = !isCard;
+  isCard ? setPressed("viewCard", ["viewScript"]) : setPressed("viewScript", ["viewCard"]);
+}
+$("viewCard").addEventListener("click", () => setView("card"));
+$("viewScript").addEventListener("click", () => setView("script"));
+
+// 시작
+setFront(state.front);
+renderChips();
+buildDeck();
+renderScript();
+</script>
