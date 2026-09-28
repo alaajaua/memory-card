@@ -126,6 +126,20 @@
   .ez { font-size: 13px; line-height: 1.5; color: var(--muted); margin-top: 6px; font-weight: 400; }
   .answer .w.kw, .en-full .kw { font-weight: 700; color: var(--copper); }
   .ez b { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--copper); margin-right: 4px; }
+  /* 표현 노트 */
+  .note-intro { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
+  .note-s { display: flex; flex-direction: column; gap: 6px; padding-block: 12px; border-top: 1px solid var(--line); }
+  .note-s:first-of-type { border-top: 0; }
+  .note-ko { font-weight: 600; font-size: 15px; }
+  .opt { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; align-items: start; padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; }
+  .opt .k { font-size: 11px; color: var(--muted); padding-top: 3px; letter-spacing: .02em; }
+  .opt .t { font-size: 15px; line-height: 1.5; }
+  .opt .b { display: flex; gap: 4px; }
+  .opt .b button { background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .opt.picked { border-color: var(--copper); background: var(--copper-soft); }
+  .opt.picked .k { color: var(--copper); font-weight: 600; }
+  .opt.picked .b .pick { background: var(--copper); border-color: var(--copper); color: var(--surface); }
+  .note-mine .opt { grid-template-columns: 1fr auto; }
   .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 
   /* 단계 학습 */
@@ -169,6 +183,10 @@
   .script li .revealed { filter: none !important; }
 
   @media (max-width: 480px) {
+    .opt { grid-template-columns: 56px 1fr; }
+    .opt .b { grid-column: 2; }
+    .note-mine .opt { grid-template-columns: 1fr; }
+    .note-mine .opt .b { grid-column: 1; }
     .front { font-size: 19px; }
     .back { font-size: 17px; }
     .card { min-height: 260px; padding: 18px 16px; }
@@ -191,6 +209,7 @@
         <button id="viewLearn" aria-pressed="true">단계 학습</button>
         <button id="viewCard" aria-pressed="false">복습 카드</button>
         <button id="viewScript" aria-pressed="false">전체 대본</button>
+        <button id="viewNote" aria-pressed="false">표현 노트</button>
       </div>
     </div>
     <div class="row">
@@ -198,6 +217,7 @@
       <div class="seg" role="group" aria-label="외울 버전">
         <button id="verOrig" aria-pressed="true">원문 대본</button>
         <button id="verEz" aria-pressed="false">쉬운 말</button>
+        <button id="verMine" aria-pressed="false">내 버전</button>
       </div>
     </div>
     <div class="row" id="frontRow">
@@ -260,6 +280,19 @@
   </section>
 
   <!-- 전체 대본 모드 -->
+  <!-- 표현 노트 -->
+  <section id="noteView" hidden>
+    <p class="note-intro">한 문장을 여러 방식으로 말해볼 수 있어요. 마음에 드는 표현에 ‘내 것’을 누르면, ‘외울 버전’에서 <b>내 버전</b>을 골라 그 표현으로 연습할 수 있어요.</p>
+    <div class="row" style="margin-bottom:10px">
+      <span class="label">보기</span>
+      <div class="seg" role="group" aria-label="노트 보기">
+        <button id="noteAll" aria-pressed="true">모든 표현</button>
+        <button id="noteMine" aria-pressed="false">내가 고른 것만</button>
+      </div>
+    </div>
+    <div class="script" id="note"></div>
+  </section>
+
   <section id="scriptView" hidden>
     <div class="row" style="margin-bottom:10px">
       <span class="label">가리기</span>
@@ -490,8 +523,264 @@ const EASY = {
  ]
 };
 const ezHtml = c => `<div class="ez"><b>쉽게 말하면</b> ${esc(c.ez)}</div>`;
-const EN = c => state.ver === "ez" ? c.ez : c.en;            // 지금 외우는 영어
-const subHtml = c => state.ver === "ez" ? `<div class="ez"><b>원문</b> ${esc(c.en)}</div>` : ezHtml(c);
+// 표현 노트: 문장마다 [짧게, 다른 표현, 격식 있게]
+const VARIANTS = {
+ "1P": [
+  [
+   "We're CIT. Materials for next-gen AI.",
+   "CIT builds the materials that next-gen AI runs on.",
+   "CIT is an advanced materials company focused on next-generation AI."
+  ],
+  [
+   "Here's what we do, and why it matters.",
+   "Let me walk you through our tech and where it fits in AI.",
+   "I'd like to briefly introduce our technology and the value it brings to AI infrastructure."
+  ]
+ ],
+ "2P": [
+  [
+   "First, our track record.",
+   "Before I get into the tech, here's what backs it up.",
+   "Before the technology itself, let me share how it has been validated."
+  ],
+  [
+   "We're in Nature, Nature Communications, and Advanced Materials.",
+   "Our work has appeared in Nature, Nature Communications, and Advanced Materials.",
+   "Our research has been published in leading journals, including Nature, Nature Communications, and Advanced Materials."
+  ],
+  [
+   "Plus, two CES Innovation Awards, 2025 and 2026.",
+   "We've won the CES Innovation Award two years running, in 2025 and 2026.",
+   "Our technology also received CES Innovation Awards in both 2025 and 2026."
+  ],
+  [
+   "So, what's the problem?",
+   "So, here's the problem we're tackling.",
+   "Now, let me turn to the challenge we are addressing in AI infrastructure."
+  ]
+ ],
+ "3P": [
+  [
+   "What's really holding AI back?",
+   "What do you think is the biggest limit on AI growth right now?",
+   "What is truly limiting the expansion of AI infrastructure?"
+  ],
+  [
+   "Not enough chips?",
+   "Most people think it's a chip shortage.",
+   "Is it simply a shortage of AI chips?"
+  ],
+  [
+   "No. It's energy.",
+   "Actually, it's energy.",
+   "In fact, the real constraint is energy."
+  ],
+  [
+   "Data centers need way more power.",
+   "Power is now the big bottleneck for data centers.",
+   "Energy is becoming a major constraint on data center expansion."
+  ]
+ ],
+ "4P": [
+  [
+   "And that leads to copper.",
+   "Energy is tied to copper, because copper carries data in AI hardware.",
+   "This energy challenge brings us to copper, a key material for data transmission in AI hardware."
+  ],
+  [
+   "Regular copper is rough.",
+   "Normal copper isn't smooth. Its surface is rough.",
+   "Conventional copper has a rough surface."
+  ],
+  [
+   "Rough copper means heat and delay.",
+   "That roughness creates heat and slows signals, so AI chips lose performance.",
+   "This roughness increases heat and signal delay, which limits AI accelerator performance."
+  ]
+ ],
+ "5P": [
+  [
+   "So copper quality matters.",
+   "That's why the quality of copper circuits is so important.",
+   "This is why copper circuit quality is critical."
+  ],
+  [
+   "Two issues: roughness and grain boundaries.",
+   "There are two key factors: how rough the surface is, and grain boundaries.",
+   "Two factors are critical here: surface roughness and grain boundaries."
+  ],
+  [
+   "Rough surface, longer path. Grain boundaries, more scattering.",
+   "Signals take a longer route on rough copper, and grain boundaries scatter electrons.",
+   "A rough surface lengthens the signal path, while grain boundaries increase electron scattering."
+  ],
+  [
+   "Result: signal loss and heat.",
+   "Together, they waste signal and create heat.",
+   "Together, they increase both signal loss and heat."
+  ]
+ ],
+ "6P": [
+  [
+   "Our answer is ASE.",
+   "To solve this, we developed ASE. That's short for Atomic Sputtering Epitaxy.",
+   "To address this, we developed ASE, Atomic Sputtering Epitaxy."
+  ],
+  [
+   "Atom by atom. Super flat copper.",
+   "ASE builds copper up atom by atom, so you get a very flat, uniform film.",
+   "ASE deposits copper atom by atom, forming an ultra-flat, highly uniform thin film."
+  ],
+  [
+   "Flat copper, less loss, less heat.",
+   "With a much flatter surface, we cut signal loss and heat.",
+   "By making the surface much flatter, ASE directly reduces signal loss and heat."
+  ]
+ ],
+ "7P": [
+  [
+   "The best of ALD and PVD, at high speed.",
+   "It's a hybrid of ALD and PVD. You get flat, uniform films, and it's fast.",
+   "ASE combines the advantages of ALD and PVD to produce flat, uniform copper films at high speed."
+  ],
+  [
+   "Ready for mass production.",
+   "It's ready to scale up to large-area production.",
+   "It is ready for large-area industrial production."
+  ],
+  [
+   "Easy upgrade, under 2% extra cost.",
+   "You don't need new machines. Just upgrade your PVD tools for under 2% more.",
+   "Existing PVD equipment can be easily upgraded, at less than 2% additional equipment cost."
+  ]
+ ],
+ "8P": [
+  [
+   "Three main uses.",
+   "ASE works across several products.",
+   "We apply ASE across multiple applications."
+  ],
+  [
+   "Copper foil for AI boards. Copper on glass for packaging.",
+   "We make HVLP copper foil for AI accelerator boards, and copper-coated glass for chip packaging.",
+   "These include HVLP copper foil for accelerator boards and copper-coated glass for semiconductor packaging."
+  ],
+  [
+   "And FCCL for flexible boards.",
+   "And FCCL, which helps flexible circuit boards move data faster.",
+   "And FCCL for high-speed data transmission in FPCBs."
+  ]
+ ],
+ "9P": [
+  [
+   "One: AI boards.",
+   "Let's start with AI accelerator boards.",
+   "First, the AI accelerator board."
+  ],
+  [
+   "NVIDIA uses 4th-gen. We're at 6th-gen.",
+   "Vera Rubin runs on 4th-gen HVLP copper. Our ASE copper is two generations ahead, at 6th-gen level.",
+   "Compared with the 4th-generation HVLP copper used in NVIDIA's Vera Rubin platform, our ASE copper reaches a 6th-generation level."
+  ],
+  [
+   "0.8 down to 0.2 micrometers. Four times flatter.",
+   "Roughness drops from about 0.8 to 0.2 micrometers, so it's up to four times smoother.",
+   "Surface roughness is reduced from about 0.8 to 0.2 micrometers, up to four times lower."
+  ]
+ ],
+ "10P": [
+  [
+   "Two: glass.",
+   "Next, glass substrates.",
+   "Second, glass substrates."
+  ],
+  [
+   "Many glass types. Even coating in 8-to-1 holes.",
+   "We've tested it on Corning, Asahi, and Schott glass, and it coats 8-to-1 TGV holes evenly.",
+   "We have validated our technology on multiple glass types, with uniform TGV coverage at an 8:1 aspect ratio."
+  ],
+  [
+   "Copper right on glass. No glue layer.",
+   "We deposit copper directly on glass, so you can skip the adhesion layer.",
+   "We also deposit copper directly on glass, without an adhesion layer."
+  ]
+ ],
+ "11P": [
+  [
+   "Three: FCCL.",
+   "And the third one is FCCL.",
+   "Third, FCCL."
+  ],
+  [
+   "Ten times flatter.",
+   "Compared to regular FCCL, ours is ten times flatter.",
+   "Our FCCL is ten times flatter than conventional FCCL."
+  ],
+  [
+   "Already selling, with repeat orders.",
+   "Customers are already buying it again and again.",
+   "It is already generating recurring revenue."
+  ]
+ ],
+ "12P": [
+  [
+   "Products, licenses, targets, and cables.",
+   "We earn from coated products, ASE licensing, single-crystal copper targets, and cables.",
+   "ASE creates several revenue streams, including deposited products, ASE licenses, single-crystal copper targets, and cables."
+  ]
+ ],
+ "13P": [
+  [
+   "Now we're scaling.",
+   "We've proven the tech. Next step is scale.",
+   "We are now moving from technical validation to scaling."
+  ],
+  [
+   "More customers, more partners.",
+   "Our list of customers and partners keeps growing.",
+   "Our customers and partners continue to expand."
+  ],
+  [
+   "6 million this year, 28 next year, 88 in 2028.",
+   "We're targeting about 6 million dollars this year, 28 million next year, and 88 million by 2028.",
+   "Based on our roadmap, revenue grows from about 6 million dollars this year to 28 million next year and 88 million in 2028."
+  ]
+ ],
+ "14P": [
+  [
+   "Strong tech, strong business.",
+   "We have deep materials experts and people who know how to commercialize.",
+   "Our team combines deep materials expertise with commercialization experience."
+  ],
+  [
+   "Copper experts plus business pros.",
+   "Our researchers bring years of copper know-how, and our business team connects it to customers, production, and capital.",
+   "Our research leadership brings long-term copper expertise, while our management, sales, and investment experience connect it to customers, production, and capital."
+  ]
+ ],
+ "15P": [
+  [
+   "Better copper for next-gen AI.",
+   "We're making the copper that next-gen AI needs.",
+   "CIT is building advanced copper materials for the next generation of AI."
+  ],
+  [
+   "Flatter copper, faster data.",
+   "Simply put, flatter copper means faster, more efficient data.",
+   "Our goal is simple: flatter copper for faster, more efficient data transmission."
+  ],
+  [
+   "Thanks!",
+   "Thanks for your time. Any questions?",
+   "Thank you for your attention."
+  ]
+ ]
+};
+const OPTS = [["orig", "원문"], ["ez", "쉬운 말"], ["short", "짧게"], ["alt", "다른 표현"], ["formal", "격식 있게"]];
+const optText = (c, k) => k === "orig" ? c.en : k === "ez" ? c.ez : VARIANTS[c.p][c.n - 1][["short", "alt", "formal"].indexOf(k)];
+const myKey = c => picks[c.id] || "ez";                         // 안 골랐으면 쉬운 말
+const EN = c => state.ver === "ez" ? c.ez : state.ver === "mine" ? optText(c, myKey(c)) : c.en;   // 지금 외우는 영어
+const subHtml = c => state.ver === "orig" ? ezHtml(c) : `<div class="ez"><b>원문</b> ${esc(c.en)}</div>`;
 
 // 문장 단위 카드 목록
 const CARDS = [];
@@ -504,6 +793,7 @@ const store = {
   set(k, v) { try { localStorage.setItem("cit-cards:" + k, JSON.stringify(v)); } catch (e) {} }
 };
 
+const picks = store.get("picks", {});                           // 문장 id -> 고른 표현 키
 const state = {
   front: store.get("front", "ko"),
   ver: store.get("ver", "orig"),
@@ -536,7 +826,7 @@ $("pageChips").addEventListener("click", e => {
   else if (state.pages.has(p)) { state.pages.delete(p); if (!state.pages.size) state.pages = new Set(PAGES.map(x => x.p)); }
   else state.pages.add(p);
   store.set("pages", [...state.pages]);
-  renderChips(); buildDeck(); renderScript(); buildLearn();
+  renderChips(); buildDeck(); renderScript(); renderNote(); buildLearn();
 });
 
 function buildDeck() {
@@ -649,6 +939,7 @@ document.addEventListener("keydown", e => {
     if ((e.key === "Enter" || e.key === " ") && $("lNext")) { e.preventDefault(); $("lNext").click(); }
     return;
   }
+  if (!$("noteView").hidden) return;
   if (!$("scriptView").hidden || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); }
   else if (e.key === "ArrowRight") go(1);
@@ -676,7 +967,7 @@ function renderScript() {
   box.innerHTML = PAGES.filter(pg => state.pages.has(pg.p)).map(pg => `
     <details open>
       <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
-      <ol>${pg.en.map((en, i) => `<li><div class="en">${esc(state.ver === "ez" ? EASY[pg.p][i] : en)}<div class="ez"><b>${state.ver === "ez" ? "원문" : "쉽게 말하면"}</b> ${esc(state.ver === "ez" ? en : EASY[pg.p][i])}</div></div><div class="ko">${esc(pg.ko[i])}</div></li>`).join("")}</ol>
+      <ol>${pg.en.map((en, i) => `<li>${(c => `<div class="en">${esc(EN(c))}${subHtml(c)}</div>`)(CARDS.find(x => x.id === pg.p + "-" + (i + 1)))}<div class="ko">${esc(pg.ko[i])}</div></li>`).join("")}</ol>
     </details>`).join("");
 }
 $("script").addEventListener("click", e => {
@@ -696,19 +987,59 @@ function setView(v) {
   $("learnView").hidden = v !== "learn";
   $("cardView").hidden = v !== "card"; $("cardView").style.display = v === "card" ? "flex" : "none";
   $("scriptView").hidden = v !== "script";
+  $("noteView").hidden = v !== "note";
   $("cardOptions").hidden = v !== "card";
   $("frontRow").hidden = v !== "card";
-  const ids = { learn: "viewLearn", card: "viewCard", script: "viewScript" };
+  const ids = { learn: "viewLearn", card: "viewCard", script: "viewScript", note: "viewNote" };
   setPressed(ids[v], Object.values(ids).filter(i => i !== ids[v]));
   store.set("view", v);
 }
 function setVer(v) {
   state.ver = v; store.set("ver", v);
-  v === "ez" ? setPressed("verEz", ["verOrig"]) : setPressed("verOrig", ["verEz"]);
+  const vids = { orig: "verOrig", ez: "verEz", mine: "verMine" };
+  setPressed(vids[v], Object.values(vids).filter(i => i !== vids[v]));
   buildDeck(); renderScript(); buildLearn();
 }
 $("verOrig").addEventListener("click", () => setVer("orig"));
 $("verEz").addEventListener("click", () => setVer("ez"));
+$("verMine").addEventListener("click", () => setVer("mine"));
+$("viewNote").addEventListener("click", () => setView("note"));
+
+// ===== 표현 노트 =====
+let noteMine = false;
+function renderNote() {
+  const box = $("note");
+  box.className = "script" + (noteMine ? " note-mine" : "");
+  box.innerHTML = PAGES.filter(pg => state.pages.has(pg.p)).map(pg => `
+    <details open>
+      <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
+      ${CARDS.filter(c => c.p === pg.p).map(c => {
+        const mine = picks[c.id];
+        const opts = noteMine ? [[myKey(c), ""]] : OPTS;
+        return `<div class="note-s">
+          <div class="note-ko">${c.n}. ${esc(c.ko)}</div>
+          ${opts.map(([k, label]) => `<div class="opt${!noteMine && mine === k ? " picked" : ""}">
+            ${noteMine ? "" : `<span class="k">${label}</span>`}
+            <span class="t">${esc(optText(c, k))}</span>
+            <span class="b"><button data-say="${c.id}|${k}">듣기</button>${noteMine ? "" : `<button class="pick" data-pick="${c.id}|${k}">${mine === k ? "내 것 ✓" : "내 것"}</button>`}</span>
+          </div>`).join("")}
+        </div>`;
+      }).join("")}
+    </details>`).join("");
+}
+$("note").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const [id, k] = (b.dataset.say || b.dataset.pick).split("|");
+  const c = CARDS.find(x => x.id === id);
+  if (b.dataset.say) return speakText(optText(c, k));
+  if (picks[id] === k) delete picks[id]; else picks[id] = k;
+  store.set("picks", picks);
+  renderNote();
+  if (state.ver === "mine") { buildDeck(); renderScript(); buildLearn(); }
+});
+$("noteAll").addEventListener("click", () => { noteMine = false; setPressed("noteAll", ["noteMine"]); renderNote(); });
+$("noteMine").addEventListener("click", () => { noteMine = true; setPressed("noteMine", ["noteAll"]); renderNote(); });
+
 $("viewLearn").addEventListener("click", () => setView("learn"));
 $("viewCard").addEventListener("click", () => setView("card"));
 $("viewScript").addEventListener("click", () => setView("script"));
@@ -748,7 +1079,7 @@ if (store.get("ezv", 1) < 2) {
   ["1P-1", "1P-2", "2P-1", "2P-2", "2P-3", "2P-4", "3P-1", "3P-4", "4P-1", "4P-3", "5P-1", "5P-2", "5P-3", "5P-4", "6P-1", "6P-2", "7P-1", "7P-2", "7P-3", "8P-1", "8P-3", "9P-2", "10P-2", "10P-3", "11P-3", "12P-1", "13P-1", "13P-3", "14P-1", "14P-2", "15P-1", "15P-3"].forEach(id => delete learn.progress["ez:" + id]);
   store.set("progress", learn.progress); store.set("ezv", 2);
 }
-const pkey = c => (state.ver === "ez" ? "ez:" : "") + c.id;
+const pkey = c => (state.ver === "ez" ? "ez:" : state.ver === "mine" ? "my-" + myKey(c) + ":" : "") + c.id;
 const stageOf = c => learn.progress[pkey(c)] || 0;
 const shuffled = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const core = w => w.replace(/^[“"‘'(]+|[.,:;?!”"’')]+$/g, "");
@@ -796,7 +1127,7 @@ function renderLearnProgress() {
   const scope = CARDS.filter(c => state.pages.has(c.p));
   const sum = scope.reduce((a, c) => a + stageOf(c), 0);
   const cnt = [0, 0, 0, 0]; scope.forEach(c => cnt[stageOf(c)]++);
-  $("lCounter").textContent = `${state.ver === "ez" ? "쉬운 말" : "원문"} · 보고 듣기 ${cnt[0]} · 배치 ${cnt[1]} · 빈칸 ${cnt[2]} · 완료 ${cnt[3]}`;
+  $("lCounter").textContent = `${{ orig: "원문", ez: "쉬운 말", mine: "내 버전" }[state.ver]} · 보고 듣기 ${cnt[0]} · 배치 ${cnt[1]} · 빈칸 ${cnt[2]} · 완료 ${cnt[3]}`;
   const pct = scope.length ? Math.round(sum / (scope.length * 3) * 100) : 0;
   $("lPct").textContent = pct + "%";
   $("lBar").style.width = pct + "%";
@@ -897,4 +1228,5 @@ renderChips();
 setVer(state.ver);
 buildDeck();
 renderScript();
+renderNote();
 </script>
