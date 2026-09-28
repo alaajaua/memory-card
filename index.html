@@ -127,6 +127,29 @@
   mark.kw { background: none; color: var(--copper); font-weight: 700; }
   .ez mark.kw { font-weight: 600; }
   .ez b { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--copper); margin-right: 4px; }
+  .seg.tabs { border: 0; overflow: visible; flex-wrap: wrap; gap: 6px; }
+  .seg.tabs button, .seg.tabs button + button { border: 1px solid var(--line); border-radius: 8px; }
+
+  /* 카드 넘기기 */
+  .flip-count { text-align: center; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .flip { perspective: 1400px; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+  .flip:focus-visible { outline: 2px solid var(--copper); outline-offset: 4px; border-radius: 18px; }
+  .flip-in { position: relative; display: grid; transition: transform .45s cubic-bezier(.2, .7, .2, 1); transform-style: preserve-3d; }
+  .flip-in.on { transform: rotateY(180deg); }
+  .face {
+    grid-area: 1 / 1; position: relative; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow);
+    min-height: 380px; padding: 44px 22px 26px; display: flex; flex-direction: column; justify-content: center; gap: 14px;
+  }
+  .f-back { transform: rotateY(180deg); border-color: var(--patina); }
+  .face .meta { font-size: 12px; color: var(--muted); position: absolute; top: 16px; left: 22px; right: 22px; }
+  .face .meta b { color: var(--copper); font-weight: 500; }
+  .face .big { font-size: 23px; font-weight: 600; line-height: 1.5; text-wrap: pretty; }
+  .f-back .big { color: var(--patina); }
+  .face .small { font-size: 14px; color: var(--muted); line-height: 1.5; border-top: 1px dashed var(--line); padding-top: 10px; }
+  .flip-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 14px; font-size: 12px; color: var(--muted); text-align: center; }
+  .flip-nav button { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; width: 44px; height: 44px; font-size: 18px; flex: none; }
+
   /* 표현 노트 */
   .note-intro { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
   .note-s { display: flex; flex-direction: column; gap: 6px; padding-block: 12px; border-top: 1px solid var(--line); }
@@ -189,7 +212,7 @@
     .back { font-size: 17px; }
     .card { min-height: 260px; padding: 18px 16px; }
   }
-  @media (prefers-reduced-motion: reduce) { .bar i { transition: none; } .answer .cursor, .bank button.wrong { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .bar i, .flip-in { transition: none; } .answer .cursor, .bank button.wrong { animation: none; } }
 </style>
 
 <div class="wrap">
@@ -203,8 +226,9 @@
   <div class="panel">
     <div class="row">
       <span class="label">보기 방식</span>
-      <div class="seg" role="group" aria-label="보기 방식">
+      <div class="seg tabs" role="group" aria-label="보기 방식">
         <button id="viewLearn" aria-pressed="true">단계 학습</button>
+        <button id="viewFlip" aria-pressed="false">카드 넘기기</button>
         <button id="viewCard" aria-pressed="false">복습 카드</button>
         <button id="viewScript" aria-pressed="false">전체 대본</button>
         <button id="viewNote" aria-pressed="false">표현 노트</button>
@@ -247,6 +271,22 @@
       <div class="bar" style="margin-top:6px"><i id="lBar"></i></div>
     </div>
     <div id="learnBody" class="learn"></div>
+  </section>
+
+  <!-- 카드 넘기기 -->
+  <section id="flipView" hidden>
+    <div class="flip-count mono" id="fCount"></div>
+    <div class="flip" id="flip" tabindex="0" aria-live="polite">
+      <div class="flip-in" id="flipIn">
+        <div class="face f-front" id="fFront"></div>
+        <div class="face f-back" id="fBack"></div>
+      </div>
+    </div>
+    <div class="flip-nav">
+      <button id="fPrev" aria-label="이전 카드">←</button>
+      <span>카드를 누르면 뒤집혀요<br>옆으로 밀면 넘어가요</span>
+      <button id="fNext" aria-label="다음 카드">→</button>
+    </div>
   </section>
 
   <!-- 카드 모드 -->
@@ -305,6 +345,7 @@
 </div>
 
 <script>
+var fl = null;   // 카드 넘기기 상태 (아래에서 초기화)
 const FLOW = ["AI 성장", "전력 문제", "구리의 한계", "표면 거칠기·결정립계", "ASE 기술", "평탄한 구리", "더 빠른 데이터 전송", "다양한 산업 적용"];
 
 const PAGES = [
@@ -924,7 +965,7 @@ $("pageChips").addEventListener("click", e => {
   else if (state.pages.has(p)) { state.pages.delete(p); if (!state.pages.size) state.pages = new Set(PAGES.map(x => x.p)); }
   else state.pages.add(p);
   store.set("pages", [...state.pages]);
-  renderChips(); buildDeck(); renderScript(); renderNote(); buildLearn();
+  renderChips(); buildDeck(); renderScript(); renderNote(); buildLearn(); buildFlip();
 });
 
 function buildDeck() {
@@ -1015,6 +1056,7 @@ function setFront(f) {
   state.front = f; store.set("front", f);
   f === "ko" ? setPressed("frontKo", ["frontEn"]) : setPressed("frontEn", ["frontKo"]);
   state.flipped = false; state.hint = false; renderCard();
+  if (fl) buildFlip();
 }
 $("frontKo").addEventListener("click", () => setFront("ko"));
 $("frontEn").addEventListener("click", () => setFront("en"));
@@ -1033,6 +1075,12 @@ $("resetMarks").addEventListener("click", e => {
 // 키보드
 document.addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (!$("flipView").hidden) {
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); flipTurn(); }
+    else if (e.key === "ArrowRight") flipGo(1);
+    else if (e.key === "ArrowLeft") flipGo(-1);
+    return;
+  }
   if (!$("learnView").hidden) {
     if ((e.key === "Enter" || e.key === " ") && $("lNext")) { e.preventDefault(); $("lNext").click(); }
     return;
@@ -1087,8 +1135,9 @@ function setView(v) {
   $("scriptView").hidden = v !== "script";
   $("noteView").hidden = v !== "note";
   $("cardOptions").hidden = v !== "card";
-  $("frontRow").hidden = v !== "card";
-  const ids = { learn: "viewLearn", card: "viewCard", script: "viewScript", note: "viewNote" };
+  $("frontRow").hidden = v !== "card" && v !== "flip";
+  $("flipView").hidden = v !== "flip";
+  const ids = { learn: "viewLearn", flip: "viewFlip", card: "viewCard", script: "viewScript", note: "viewNote" };
   setPressed(ids[v], Object.values(ids).filter(i => i !== ids[v]));
   store.set("view", v);
 }
@@ -1096,12 +1145,47 @@ function setVer(v) {
   state.ver = v; store.set("ver", v);
   const vids = { orig: "verOrig", ez: "verEz", mine: "verMine" };
   setPressed(vids[v], Object.values(vids).filter(i => i !== vids[v]));
-  buildDeck(); renderScript(); buildLearn();
+  buildDeck(); renderScript(); buildLearn(); buildFlip();
 }
 $("verOrig").addEventListener("click", () => setVer("orig"));
 $("verEz").addEventListener("click", () => setVer("ez"));
 $("verMine").addEventListener("click", () => setVer("mine"));
 $("viewNote").addEventListener("click", () => setView("note"));
+$("viewFlip").addEventListener("click", () => setView("flip"));
+
+// ===== 카드 넘기기: 앞뒤만 보는 가장 단순한 카드 =====
+fl = { deck: [], i: 0, on: false };
+function buildFlip() {
+  fl.deck = DECK().filter(c => state.pages.has(c.p));
+  fl.i = 0; fl.on = false; renderFlip();
+}
+function renderFlip() {
+  const c = fl.deck[fl.i];
+  $("flipIn").classList.toggle("on", fl.on);
+  if (!c) { $("fFront").innerHTML = '<div class="big" style="text-align:center;color:var(--muted)">선택한 페이지에 문장이 없어요.</div>'; $("fBack").innerHTML = ""; $("fCount").textContent = "0 / 0"; return; }
+  const fk = state.front, bk = fk === "ko" ? "en" : "ko";
+  const txt = k => k === "en" ? EN(c) : KO(c);
+  const meta = `<div class="meta"><b class="mono">${c.p}</b> ${esc(c.t)} · ${c.n}/${c.total}${c.mk ? ` · ${optLabel(c.mk)}` : ""}</div>`;
+  $("fFront").innerHTML = `${meta}<div class="lang">${fk === "ko" ? "한국어" : "English"}</div><div class="big">${hl(txt(fk))}</div>`;
+  $("fBack").innerHTML = `${meta}<div class="lang">${bk === "ko" ? "한국어" : "English"}</div><div class="big">${hl(txt(bk))}</div><div class="small">${hl(txt(fk))}</div>`;
+  $("fCount").textContent = `${fl.i + 1} / ${fl.deck.length}`;
+}
+function flipTurn() { if (!fl.deck.length) return; fl.on = !fl.on; renderFlip(); }
+function flipGo(d) {
+  if (!fl.deck.length) return;
+  fl.i = (fl.i + d + fl.deck.length) % fl.deck.length; fl.on = false; renderFlip();
+}
+$("flip").addEventListener("click", flipTurn);
+$("fPrev").addEventListener("click", () => flipGo(-1));
+$("fNext").addEventListener("click", () => flipGo(1));
+let fsx = null, fsy = null;
+$("flip").addEventListener("touchstart", e => { fsx = e.touches[0].clientX; fsy = e.touches[0].clientY; }, { passive: true });
+$("flip").addEventListener("touchend", e => {
+  if (fsx == null) return;
+  const dx = e.changedTouches[0].clientX - fsx, dy = e.changedTouches[0].clientY - fsy;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) { flipGo(dx < 0 ? 1 : -1); e.preventDefault(); }
+  fsx = null;
+});
 
 // ===== 표현 노트 =====
 let noteMine = false;
@@ -1135,7 +1219,7 @@ $("note").addEventListener("click", e => {
   if (!picks[id].length) delete picks[id];
   store.set("picks", picks);
   renderNote();
-  if (state.ver === "mine") { buildDeck(); renderScript(); buildLearn(); }
+  if (state.ver === "mine") { buildDeck(); renderScript(); buildLearn(); buildFlip(); }
 });
 $("noteAll").addEventListener("click", () => { noteMine = false; setPressed("noteAll", ["noteMine"]); renderNote(); });
 $("noteMine").addEventListener("click", () => { noteMine = true; setPressed("noteMine", ["noteAll"]); renderNote(); });
