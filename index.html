@@ -174,6 +174,7 @@
   .kw-btns { display: flex; gap: 6px; flex-wrap: wrap; }
   .kw-btns button, .say { background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font-size: 12px; color: var(--muted); }
   .script li .say { margin-top: 4px; }
+  .script li.playing { background: var(--copper-soft); border-radius: 8px; outline: 6px solid var(--copper-soft); }
   .page-say { margin: 6px 0 0; }
 
   /* 표현 노트 */
@@ -383,6 +384,12 @@
         <button id="hideEn" aria-pressed="false">영어 가리기</button>
         <button id="hideKo" aria-pressed="false">한국어 가리기</button>
       </div>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <span class="label">듣기</span>
+      <button class="toggle" id="sayAll">▶ 전체 대본 듣기</button>
+      <button class="toggle" id="sayStop">■ 멈춤</button>
+      <span class="note-intro" id="sayNow" style="margin:0"></span>
     </div>
     <div class="script" id="script"></div>
   </section>
@@ -1155,7 +1162,7 @@ function renderScript() {
     <details open>
       <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
       <button class="say page-say" data-page="${pg.p}">▶ 이 페이지 이어 듣기</button>
-      <ol>${pg.en.map((en, i) => `<li>${(c => `<div class="en">${state.ver === "mine" ? myKeys(c).map(k => hl(optText(c, k))).join("<br>") : hl(EN(c))}${subHtml(c)}</div>`)(CARDS.find(x => x.id === pg.p + "-" + (i + 1)))}<div class="ko">${hl(KO(CARDS.find(x => x.id === pg.p + "-" + (i + 1))))}</div><button class="say" data-id="${pg.p}-${i + 1}">▶ 듣기</button></li>`).join("")}</ol>
+      <ol>${pg.en.map((en, i) => `<li data-id="${pg.p}-${i + 1}">${(c => `<div class="en">${state.ver === "mine" ? myKeys(c).map(k => hl(optText(c, k))).join("<br>") : hl(EN(c))}${subHtml(c)}</div>`)(CARDS.find(x => x.id === pg.p + "-" + (i + 1)))}<div class="ko">${hl(KO(CARDS.find(x => x.id === pg.p + "-" + (i + 1))))}</div><button class="say" data-id="${pg.p}-${i + 1}">▶ 듣기</button></li>`).join("")}</ol>
     </details>`).join("");
 }
 $("script").addEventListener("click", e => {
@@ -1847,12 +1854,32 @@ function speakText(t, done) {
   speechSynthesis.speak(u);
 }
 // 여러 문장 이어 듣기 (페이지 단위)
-function playSeq(texts) {
+function playSeq(texts, onStep) {
   speakText("");                                      // 재생 중인 것 정리
-  seq = texts.slice();
-  const next = () => { const t = seq.shift(); if (t) speakText(t, () => setTimeout(next, 350)); };
+  seq = texts.slice(); let i = 0;
+  const next = () => {
+    const t = seq.shift();
+    if (!t) { if (onStep) onStep(-1); return; }
+    if (onStep) onStep(i++);
+    speakText(t, () => setTimeout(next, 350));
+  };
   next();
 }
+function stopAll() { speakText(""); markPlaying(null); }
+// 전체 대본: 선택한 페이지를 처음부터 끝까지 이어 듣기
+function markPlaying(id) {
+  document.querySelectorAll("#script li.playing").forEach(li => li.classList.remove("playing"));
+  $("sayNow").textContent = "";
+  if (!id) return;
+  const li = document.querySelector(`#script li[data-id="${id}"]`);
+  if (li) { li.classList.add("playing"); li.scrollIntoView({ block: "center", behavior: "smooth" }); }
+  $("sayNow").textContent = `지금: ${id}`;
+}
+$("sayAll").addEventListener("click", () => {
+  const list = CARDS.filter(c => state.pages.has(c.p));
+  playSeq(list.map(EN), i => markPlaying(i < 0 ? null : list[i].id));
+});
+$("sayStop").addEventListener("click", stopAll);
 const pageTexts = p => CARDS.filter(c => c.p === p).map(EN);
 
 function buildLearn() {
