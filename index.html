@@ -150,6 +150,32 @@
   .flip-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 14px; font-size: 12px; color: var(--muted); text-align: center; }
   .flip-nav button { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; width: 44px; height: 44px; font-size: 18px; flex: none; }
 
+  /* 발표 키워드 */
+  .kw-flow { font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .kw-flow b { color: var(--ink); font-weight: 600; }
+  .kw-page { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .kw-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .kw-head h3 { margin: 0; font-size: 16px; }
+  .kw-head h3 .mono { color: var(--copper); font-size: 13px; margin-right: 6px; }
+  .kw-cue { font-size: 12px; color: var(--muted); background: var(--bg); border-radius: 6px; padding: 6px 8px; }
+  .kw-cue b { font-weight: 600; color: var(--ink); margin-right: 4px; }
+  .kw-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; }
+  .kw-item { display: inline-flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; background: var(--surface); cursor: pointer; min-width: 44px; }
+  .kw-item .e { font-size: 14px; font-weight: 600; color: var(--copper); }
+  .kw-item .k { font-size: 12px; color: var(--muted); }
+  .kw-item.hid { background: var(--bg); border-style: dashed; }
+  .kw-item.hid { align-items: center; justify-content: center; min-width: 52px; min-height: 44px; }
+  .kw-item .q { font-size: 16px; font-weight: 700; color: var(--muted); }
+  .kw-item.next .q { color: var(--copper); }
+  .kw-item.next { border-color: var(--copper); border-style: solid; }
+  .kw-arrow { color: var(--line); font-size: 13px; }
+  .kw-tip { font-size: 12px; color: var(--patina); }
+  .kw-extra { font-size: 12px; color: var(--muted); }
+  .kw-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .kw-btns button, .say { background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font-size: 12px; color: var(--muted); }
+  .script li .say { margin-top: 4px; }
+  .page-say { margin: 6px 0 0; }
+
   /* 표현 노트 */
   .note-intro { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
   .note-s { display: flex; flex-direction: column; gap: 6px; padding-block: 12px; border-top: 1px solid var(--line); }
@@ -232,6 +258,7 @@
         <button id="viewCard" aria-pressed="false">복습 카드</button>
         <button id="viewScript" aria-pressed="false">전체 대본</button>
         <button id="viewNote" aria-pressed="false">표현 노트</button>
+        <button id="viewKw" aria-pressed="false">발표 키워드</button>
       </div>
     </div>
     <div class="row">
@@ -321,6 +348,20 @@
   </section>
 
   <!-- 전체 대본 모드 -->
+  <!-- 발표 키워드 -->
+  <section id="kwView" hidden style="flex-direction:column;gap:12px">
+    <div class="kw-flow" id="kwFlow"></div>
+    <div class="row">
+      <span class="label">연습</span>
+      <div class="seg" role="group" aria-label="키워드 보기">
+        <button id="kwShow" aria-pressed="true">모두 보기</button>
+        <button id="kwQuiz" aria-pressed="false">하나씩 떠올리기</button>
+      </div>
+    </div>
+    <p class="note-intro" id="kwHelp"></p>
+    <div id="kwBox" style="display:flex;flex-direction:column;gap:12px"></div>
+  </section>
+
   <!-- 표현 노트 -->
   <section id="noteView" hidden>
     <p class="note-intro">한 문장을 여러 방식으로 말해볼 수 있어요. 마음에 드는 표현에 ‘내 것’을 누르면(여러 개 가능), ‘외울 버전’에서 <b>내 버전</b>을 골라 그 표현으로 연습할 수 있어요.</p>
@@ -968,7 +1009,7 @@ $("pageChips").addEventListener("click", e => {
   else if (state.pages.has(p)) { state.pages.delete(p); if (!state.pages.size) state.pages = new Set(PAGES.map(x => x.p)); }
   else state.pages.add(p);
   store.set("pages", [...state.pages]);
-  renderChips(); buildDeck(); renderScript(); renderNote(); buildLearn(); buildFlip();
+  renderChips(); buildDeck(); renderScript(); renderNote(); buildLearn(); buildFlip(); renderKw();
 });
 
 function buildDeck() {
@@ -1113,10 +1154,13 @@ function renderScript() {
   box.innerHTML = PAGES.filter(pg => state.pages.has(pg.p)).map(pg => `
     <details open>
       <summary><span class="mono">${pg.p}</span>${esc(pg.t)}</summary>
-      <ol>${pg.en.map((en, i) => `<li>${(c => `<div class="en">${state.ver === "mine" ? myKeys(c).map(k => hl(optText(c, k))).join("<br>") : hl(EN(c))}${subHtml(c)}</div>`)(CARDS.find(x => x.id === pg.p + "-" + (i + 1)))}<div class="ko">${hl(KO(CARDS.find(x => x.id === pg.p + "-" + (i + 1))))}</div></li>`).join("")}</ol>
+      <button class="say page-say" data-page="${pg.p}">▶ 이 페이지 이어 듣기</button>
+      <ol>${pg.en.map((en, i) => `<li>${(c => `<div class="en">${state.ver === "mine" ? myKeys(c).map(k => hl(optText(c, k))).join("<br>") : hl(EN(c))}${subHtml(c)}</div>`)(CARDS.find(x => x.id === pg.p + "-" + (i + 1)))}<div class="ko">${hl(KO(CARDS.find(x => x.id === pg.p + "-" + (i + 1))))}</div><button class="say" data-id="${pg.p}-${i + 1}">▶ 듣기</button></li>`).join("")}</ol>
     </details>`).join("");
 }
 $("script").addEventListener("click", e => {
+  const b = e.target.closest("button.say");
+  if (b) { if (b.dataset.page) playSeq(pageTexts(b.dataset.page)); else speakText(EN(CARDS.find(x => x.id === b.dataset.id))); return; }
   const t = e.target.closest(".en, .ko"); if (t) t.classList.toggle("revealed");
 });
 function setHide(m) {
@@ -1134,10 +1178,11 @@ function setView(v) {
   $("cardView").hidden = v !== "card"; $("cardView").style.display = v === "card" ? "flex" : "none";
   $("scriptView").hidden = v !== "script";
   $("noteView").hidden = v !== "note";
+  $("kwView").hidden = v !== "kw"; $("kwView").style.display = v === "kw" ? "flex" : "none";
   $("cardOptions").hidden = v !== "card";
   $("frontRow").hidden = v !== "card" && v !== "flip";
   $("flipView").hidden = v !== "flip";
-  const ids = { learn: "viewLearn", flip: "viewFlip", card: "viewCard", script: "viewScript", note: "viewNote" };
+  const ids = { learn: "viewLearn", flip: "viewFlip", card: "viewCard", script: "viewScript", note: "viewNote", kw: "viewKw" };
   setPressed(ids[v], Object.values(ids).filter(i => i !== ids[v]));
   store.set("view", v);
 }
@@ -1152,6 +1197,515 @@ $("verEz").addEventListener("click", () => setVer("ez"));
 $("verMine").addEventListener("click", () => setVer("mine"));
 $("viewNote").addEventListener("click", () => setView("note"));
 $("viewFlip").addEventListener("click", () => setView("flip"));
+$("viewKw").addEventListener("click", () => setView("kw"));
+
+// ===== 발표 키워드: PPT 페이지별로 말할 순서 =====
+// 페이지: [제목, 화면 단서, [[영어, 한국어] …], 팁, 슬라이드에만 있는 내용]
+const KW = {
+ "1P": [
+  "회사 소개",
+  "Advanced IT Materials Company for Next-Gen AI",
+  [
+   [
+    "CIT",
+    "CIT"
+   ],
+   [
+    "advanced IT materials",
+    "첨단 IT 소재"
+   ],
+   [
+    "next-gen AI",
+    "차세대 AI"
+   ],
+   [
+    "our technology",
+    "우리 기술"
+   ],
+   [
+    "why it matters",
+    "왜 중요한가"
+   ],
+   [
+    "AI infrastructure",
+    "AI 인프라"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "2P": [
+  "검증",
+  "Proven Technology with Global Validation · 논문 표지 · CES 로고",
+  [
+   [
+    "validation first",
+    "검증 먼저"
+   ],
+   [
+    "Nature · Nature Communications · Advanced Materials",
+    "논문 3곳"
+   ],
+   [
+    "CES Innovation Awards",
+    "CES 혁신상"
+   ],
+   [
+    "2025 · 2026",
+    "2025 · 2026"
+   ],
+   [
+    "the problem",
+    "이제 문제로"
+   ]
+  ],
+  "",
+  "MWC 2025·2026, Gadgety Awards"
+ ],
+ "3P": [
+  "에너지 문제",
+  "Shortage of AI Chips? · Energy → IDC expansion restrictions",
+  [
+   [
+    "what's limiting growth?",
+    "성장을 막는 건?"
+   ],
+   [
+    "not enough AI chips?",
+    "AI 칩 부족?"
+   ],
+   [
+    "No",
+    "아니요"
+   ],
+   [
+    "energy",
+    "에너지"
+   ],
+   [
+    "data centers",
+    "데이터센터"
+   ],
+   [
+    "harder to expand",
+    "확장 어려움"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "4P": [
+  "구리 문제",
+  "Conventional Copper · Rough Copper Surface · High Heat · Limits Performance",
+  [
+   [
+    "copper",
+    "구리"
+   ],
+   [
+    "key material",
+    "핵심 소재"
+   ],
+   [
+    "data transfer",
+    "데이터 전송"
+   ],
+   [
+    "AI hardware",
+    "AI 하드웨어"
+   ],
+   [
+    "but rough surface",
+    "하지만 표면 거침"
+   ],
+   [
+    "heat · signal delay · lower performance",
+    "발열 · 신호 지연 · 성능 저하"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "5P": [
+  "원인 2가지",
+  "① Surface Roughness ② Grain Boundary · Long ↔ Short · More ↔ Less",
+  [
+   [
+    "copper quality",
+    "구리 품질"
+   ],
+   [
+    "two factors",
+    "두 가지"
+   ],
+   [
+    "① surface roughness",
+    "① 표면 거칠기"
+   ],
+   [
+    "longer signal path",
+    "신호 경로 길어짐"
+   ],
+   [
+    "② grain boundaries",
+    "② 결정립계"
+   ],
+   [
+    "electron scattering",
+    "전자 산란"
+   ],
+   [
+    "signal loss + heat",
+    "신호 손실 + 발열"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "6P": [
+  "해결책 ASE",
+  "ASE Technology · 구리 원자 구슬 이미지",
+  [
+   [
+    "our solution",
+    "해결책"
+   ],
+   [
+    "ASE",
+    "ASE"
+   ],
+   [
+    "Atomic Sputtering Epitaxy",
+    "Atomic Sputtering Epitaxy"
+   ],
+   [
+    "atom by atom",
+    "원자 단위로 쌓기"
+   ],
+   [
+    "flat & even",
+    "평탄 · 균일"
+   ],
+   [
+    "less signal loss & heat",
+    "신호 손실 · 발열 감소"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "7P": [
+  "ASE 특징",
+  "Hybrid Process ALD(Roughness) & PVD(Speed) · Ready for Industrial Production · <2%",
+  [
+   [
+    "ALD + PVD",
+    "ALD + PVD 결합"
+   ],
+   [
+    "flatness + speed",
+    "평탄도 + 속도"
+   ],
+   [
+    "large-area production",
+    "대면적 생산"
+   ],
+   [
+    "ready",
+    "준비 완료"
+   ],
+   [
+    "easy PVD upgrade",
+    "PVD 장비 쉬운 업그레이드"
+   ],
+   [
+    "extra cost < 2%",
+    "추가 비용 2% 미만"
+   ]
+  ],
+  "ALD = Roughness(평탄), PVD = Speed(속도)로 짝지어 기억하세요.",
+  "국제 특허 등록 4건 · 출원 15건"
+ ],
+ "8P": [
+  "적용 분야 3가지",
+  "One Platform, Multiple Applications · 상자 3개",
+  [
+   [
+    "several areas",
+    "여러 분야"
+   ],
+   [
+    "① HVLP copper foil – AI accelerator boards",
+    "① HVLP 동박 – AI 가속기 보드"
+   ],
+   [
+    "② copper-coated glass – semiconductor packaging",
+    "② 구리 코팅 유리 – 반도체 패키징"
+   ],
+   [
+    "③ FCCL – high-speed data",
+    "③ FCCL – 고속 데이터"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "9P": [
+  "① AI 가속기 보드",
+  "4th-gen (Vera Rubin) vs 6th-gen (CIT) · Up to 4× Flatter",
+  [
+   [
+    "first application",
+    "첫 번째"
+   ],
+   [
+    "AI accelerator board",
+    "AI 가속기 보드"
+   ],
+   [
+    "NVIDIA Vera Rubin",
+    "NVIDIA Vera Rubin"
+   ],
+   [
+    "4th-gen HVLP",
+    "4세대 HVLP"
+   ],
+   [
+    "ours: 6th-gen level",
+    "우리: 6세대 수준"
+   ],
+   [
+    "0.8 → 0.2 µm",
+    "0.8 → 0.2µm"
+   ],
+   [
+    "about 4× flatter",
+    "약 4배 평탄"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "10P": [
+  "② 유리 기판",
+  "Corning / Asahi / SCHOTT · TGV (8:1) · No Adhesion Layer",
+  [
+   [
+    "second",
+    "두 번째"
+   ],
+   [
+    "glass substrate",
+    "유리 기판"
+   ],
+   [
+    "different glass materials",
+    "여러 유리 소재"
+   ],
+   [
+    "8-to-1 TGV",
+    "8:1 TGV"
+   ],
+   [
+    "copper evenly",
+    "구리 균일"
+   ],
+   [
+    "directly on glass",
+    "유리에 직접"
+   ],
+   [
+    "no bonding layer",
+    "접착층 없음"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "11P": [
+  "③ FCCL",
+  "Conventional vs CIT FCCL · 10X Improve Flatness",
+  [
+   [
+    "third",
+    "세 번째"
+   ],
+   [
+    "FCCL",
+    "FCCL"
+   ],
+   [
+    "10× flatter",
+    "10배 평탄"
+   ],
+   [
+    "than conventional",
+    "기존 대비"
+   ],
+   [
+    "already",
+    "이미"
+   ],
+   [
+    "recurring revenue",
+    "반복 매출"
+   ]
+  ],
+  "",
+  "표면 거칠기 5nm 미만"
+ ],
+ "12P": [
+  "매출 구조",
+  "Deposited Products · Target / License / Cable",
+  [
+   [
+    "several ways",
+    "여러 방식"
+   ],
+   [
+    "products",
+    "제품"
+   ],
+   [
+    "licenses",
+    "라이선스"
+   ],
+   [
+    "copper targets",
+    "구리 타겟"
+   ],
+   [
+    "cables",
+    "케이블"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "13P": [
+  "로드맵",
+  "Technical Validation → Market Entry → Sales Growth → Scaling Up · 막대그래프 6 · 28 · 88",
+  [
+   [
+    "testing",
+    "테스트"
+   ],
+   [
+    "scale-up",
+    "스케일업"
+   ],
+   [
+    "more customers & partners",
+    "고객 · 파트너 증가"
+   ],
+   [
+    "roadmap",
+    "로드맵"
+   ],
+   [
+    "6M this year",
+    "올해 600만 달러"
+   ],
+   [
+    "28M next year",
+    "내년 2,800만"
+   ],
+   [
+    "88M in 2028",
+    "2028년 8,800만"
+   ]
+  ],
+  "",
+  ""
+ ],
+ "14P": [
+  "팀",
+  "5명 사진 (CEO · CTO · 연구 · 영업 · 투자)",
+  [
+   [
+    "materials expertise",
+    "소재 전문성"
+   ],
+   [
+    "business experience",
+    "비즈니스 경험"
+   ],
+   [
+    "develop it",
+    "개발한다"
+   ],
+   [
+    "commercialize it",
+    "사업화한다"
+   ]
+  ],
+  "",
+  "팀원 이름과 경력"
+ ],
+ "15P": [
+  "마무리",
+  "A Pioneer of Next-Gen AI Future",
+  [
+   [
+    "better copper",
+    "더 나은 구리"
+   ],
+   [
+    "future of AI",
+    "AI의 미래"
+   ],
+   [
+    "goal",
+    "목표"
+   ],
+   [
+    "flatter copper",
+    "더 평탄한 구리"
+   ],
+   [
+    "faster, more efficient data",
+    "더 빠르고 효율적인 데이터"
+   ],
+   [
+    "thanks for listening",
+    "감사합니다"
+   ]
+  ],
+  "",
+  ""
+ ]
+};
+let kwQuiz = false; const kwShown = {};             // 페이지 -> 드러낸 키워드 수
+$("kwFlow").innerHTML = "<b>전체 흐름</b> " + Object.keys(KW).map(p => `${p} ${esc(KW[p][0])}`).join(" → ");
+function renderKw() {
+  $("kwHelp").textContent = kwQuiz
+    ? "화면 단서만 보고 다음 키워드를 떠올린 뒤, 키워드 칸을 누르면 하나씩 열려요."
+    : "PPT 화면을 보면서 이 순서대로 말하면 돼요. 키워드를 누르면 그 키워드부터 가리고 연습할 수 있어요.";
+  $("kwBox").innerHTML = Object.keys(KW).filter(p => state.pages.has(p)).map(p => {
+    const [title, cue, items, tip, extra] = KW[p];
+    const shown = kwQuiz ? (kwShown[p] || 0) : items.length;
+    return `<div class="kw-page">
+      <div class="kw-head"><h3><span class="mono">${p}</span>${esc(title)}</h3>
+        <div class="kw-btns"><button data-say="${p}">▶ 쉬운 대본 듣기</button>${kwQuiz ? `<button data-reset="${p}">처음부터</button>` : ""}</div></div>
+      <div class="kw-cue"><b>화면</b>${esc(cue)}</div>
+      <div class="kw-list">${items.map(([e, k], i) => `${i ? '<span class="kw-arrow">→</span>' : ""}<span class="kw-item${i >= shown ? " hid" : ""}${kwQuiz && i === shown ? " next" : ""}" data-p="${p}" data-i="${i}">${i >= shown ? '<span class="q">?</span>' : `<span class="e">${esc(e)}</span><span class="k">${esc(k)}</span>`}</span>`).join("")}</div>
+      ${tip ? `<div class="kw-tip">💡 ${esc(tip)}</div>` : ""}
+      ${extra ? `<div class="kw-extra">슬라이드에만 있음 (질문 대비): ${esc(extra)}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+$("kwBox").addEventListener("click", e => {
+  const say = e.target.closest("[data-say]"), reset = e.target.closest("[data-reset]"), it = e.target.closest(".kw-item");
+  if (say) return playSeq(pageTexts(say.dataset.say));
+  if (reset) { kwShown[reset.dataset.reset] = 0; return renderKw(); }
+  if (!it) return;
+  const p = it.dataset.p, i = +it.dataset.i;
+  if (!kwQuiz) { kwQuiz = true; setPressed("kwQuiz", ["kwShow"]); Object.keys(KW).forEach(x => kwShown[x] = KW[x][2].length); kwShown[p] = i; }
+  else kwShown[p] = i < (kwShown[p] || 0) ? i : (kwShown[p] || 0) + 1;
+  renderKw();
+});
+$("kwShow").addEventListener("click", () => { kwQuiz = false; setPressed("kwShow", ["kwQuiz"]); renderKw(); });
+$("kwQuiz").addEventListener("click", () => { kwQuiz = true; setPressed("kwQuiz", ["kwShow"]); Object.keys(KW).forEach(x => kwShown[x] = 0); renderKw(); });
 
 // ===== 카드 넘기기: 앞뒤만 보는 가장 단순한 카드 =====
 fl = { deck: [], i: 0, on: false };
@@ -1277,14 +1831,29 @@ const core = w => w.replace(/^[“"‘'(]+|[.,:;?!”"’')]+$/g, "");
 // 쉬운 말 문장은 녹음 파일(audio/ez/1P-1.mp3 …)로, 나머지는 브라우저 음성으로
 const EZ_ID = {}; CARDS.forEach(c => { EZ_ID[c.ez] = c.id; });
 const player = new Audio();
-function speakText(t) {
+let seq = [];
+function speakText(t, done) {
+  if (!done) seq = [];                                  // 한 문장 듣기는 이어 듣기를 멈춤
   if ("speechSynthesis" in window) speechSynthesis.cancel();
-  player.pause();
-  if (EZ_ID[t]) { player.src = `audio/ez/${EZ_ID[t]}.mp3`; player.currentTime = 0; player.play().catch(() => {}); return; }
-  if (!("speechSynthesis" in window)) return;
+  player.pause(); player.onended = null;
+  if (EZ_ID[t]) {
+    player.src = `audio/ez/${EZ_ID[t]}.mp3`; player.currentTime = 0;
+    player.onended = done || null;
+    player.play().catch(() => {}); return;
+  }
+  if (!t || !("speechSynthesis" in window)) return;
   const u = new SpeechSynthesisUtterance(t); u.lang = "en-US"; u.rate = 0.95;
+  if (done) u.onend = done;
   speechSynthesis.speak(u);
 }
+// 여러 문장 이어 듣기 (페이지 단위)
+function playSeq(texts) {
+  speakText("");                                      // 재생 중인 것 정리
+  seq = texts.slice();
+  const next = () => { const t = seq.shift(); if (t) speakText(t, () => setTimeout(next, 350)); };
+  next();
+}
+const pageTexts = p => CARDS.filter(c => c.p === p).map(EN);
 
 function buildLearn() {
   learn.queue = DECK().filter(c => state.pages.has(c.p) && stageOf(c) < 3);
@@ -1424,4 +1993,5 @@ setVer(state.ver);
 buildDeck();
 renderScript();
 renderNote();
+renderKw();
 </script>
