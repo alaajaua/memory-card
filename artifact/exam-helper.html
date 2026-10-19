@@ -120,6 +120,15 @@ textarea.field { resize: vertical; }
 .rate .r-dontknow[aria-pressed="true"] { border-color: var(--bad); }
 
 .cloze { line-height: 2.4; }
+.drill { gap: 12px; }
+.dprompt { font-size: 1.05rem; line-height: 1.9; }
+.dprompt b { color: var(--muted); font-weight: 500; }
+.dblank { color: var(--accent); font-weight: 700; letter-spacing: 1px; }
+.dinput { font-size: 1.1rem; padding: 12px 14px; border-width: 2px; }
+.dinput[data-state="typing"] { border-color: var(--accent); }
+.dinput[data-state="wrong"] { border-color: var(--bad); background: var(--bad-soft); }
+.dinput[data-state="ok"] { border-color: var(--good); background: var(--good-soft); }
+.dans { font-size: 1.25rem; font-weight: 700; color: var(--good); }
 .glist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
 .glist li { padding: 9px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
 .glist li:first-child { border-top: 0; }
@@ -805,7 +814,7 @@ const KS_GROUPS = [
     ["거빈스", "왕립아시아학회 한국지부(RASKB) 초대 회장", [15]],
     ["존스 · 헐버트 · 게일", "영국왕립아시아학회에서 '선교사 겸 학자'로 불린 대표 인물", [16]],
     ["트롤로프", "왕립아시아학회 한국지부에 적극 참여한 영국 국교회 선교사", [17]],
-    ["매큔", "라이샤워와 함께 매큔―라이샤워 표기법 개발 (2세대 연구자)", [18]],
+    ["매큔", "라이샤워와 함께 표기법을 개발한 2세대 연구자", [18]],
     ["스왈렌", "한국의 자장가를 연구한 2세대 연구자", [18]],
     ["노블 · 매큔 · 스왈렌 · 윔볼드 · 에카르트", "1세대 이후 등장한 선교사 2세대·미국 학계·독일인 신부 연구자", [18]],
     ["모스 · 지볼트 · 벨츠", "일본 연구의 출발점이 된 '고용 외국인'", [22]],
@@ -877,24 +886,24 @@ const KS_GROUPS = [
     ["꼬리아(Coria/Corea)", "조선왕조 이후 예수회 선교사들을 통해 정착된 표기", [4]],
     ["기자 동래설 · 임나일본부설", "로드리게스가 서구에 사실처럼 전달한 역사적 오류 → '타율적이고 종속적인 역사'로 오인", [5]],
     ["식민사관", "에노모토의 번역서가 기본 구도를 제공했다는 혐의, 조선사학회가 보급", [11, 27]],
-    ["매큔―라이샤워 표기법", "매큔과 라이샤워가 개발한 표기법", [18]],
+    ["매큔―라이샤워 표기법", "2세대 연구자와 라이샤워가 함께 개발한 표기법", [18]],
     ["맞춤형 적용", "일본 제국이 영국의 인도 통치·독일의 폴란드 정책을 학습해 조선에 적용한 방식", [20]],
     ["제국 클럽", "메이지 일본 정부가 가입을 갈망 → 조선의 식민지 경영 능력을 서구 열강에 과시", [21]],
     ["외지(外地, 가이치)", "일본 제국이 타이완·조선 등을 '식민지' 대신 부른 공식 명칭", [23]],
     ["내지(內地, 나이치)", "일본 본토 — 이를 확장하려는 구상 아래 차별화와 동질화를 동시에 추구", [23]],
     ["촉탁", "초기 일본 학자들이 조선총독부와 결합한 업무 형태", [24]],
-    ["제1물결 / 제1.5물결 / 제2물결", "서양 선교사·외교관 / 일본 관학자 / 1920~1930년대 조선 지식인의 한국학 연구", [26, 30]],
+    ["제1물결 · 제1.5물결 · 제2물결", "서양 선교사·외교관 / 일본 관학자 / 1920~1930년대 조선 지식인의 한국학 연구", [26, 30]],
     ["정전화", "『조선사』 37권이 특정 사료에 한 일", [27]],
     ["번안", "복제(Copy)·이식(Transplantation)과 달리 수용 주체가 시공간의 차이를 전유·변형하는 수행적 실천", [31]],
     ["두 개의 서양 (서양 1 · 서양 2)", "일본이 번안한 서양 / 한국이 직접 대면한 미국 중심의 서양", [32]],
     ["재번안", "1930년대 식민지 근대의 번안 양식이 1960년대 압축 성장 과정에서 다시 번안된 것", [33]],
-    ["중역 — '약'과 '독'", "일본어를 거친 번역: 신속한 제도 이식(약) / 구어·문어 괴리, 언문일치의 형식화(독)", [34]],
+    ["중역", "조선이 서양 텍스트를 직접 번역하지 않고 일본어를 거친 경로 — 신속한 제도 이식이라는 '약'이자 언문일치의 형식화를 낳은 '독'", [34]],
     ["'일제의 정치적 지배는 말의 지배를 통해 완성되었다'", "근대어와 중역 과정을 요약한 명제", [34]],
     ["지식―권력의 장치", "경성제국대학이 국립서울대학교로 재편된 뒤에도 일정 부분 이어진 구조", [35]],
     ["관학 = 입신양명", "고등문관시험 합격 식민지 엘리트가 해방 후 재생산한 구조", [36]],
     ["이중 번안 · 화양절충", "슈니첼 → 커틀릿 → 가쓰레쓰 → 돈가스, 약 60년에 걸친 일본식 결합", [37]],
     ["삼중 번안", "『장한몽』처럼 세 번 번안된 작품", [38]],
-    ["이이제이 / 백전백패", "'알고 부르면 이이제이이지만 모르고 부르면 백전백패' — 혈청지원가의 교훈", [39]],
+    ["이이제이 · 백전백패", "'알고 부르면 이이제이이지만 모르고 부르면 백전백패' — 혈청지원가의 교훈", [39]],
   ] },
   { id: "years", title: "연도 · 숫자", entries: [
     ["1247년", "카르피나 『몽골인의 역사』", [3]],
@@ -1426,6 +1435,8 @@ function render() {
   if (S.unavailable) { app.innerHTML = `<div class="card"><h2>이 화면에서는 사용할 수 없습니다</h2><p class="muted">${esc(S.unavailable)}</p></div>`; return; }
   const v = { home: viewHome, new: viewNew, set: viewSet, review: viewReview }[S.view] || viewHome;
   app.innerHTML = v();
+  const di = $("#drill-in");
+  if (di) { di.value = S.drill.value || ""; if (di.value) drillLive(di); di.focus({ preventScroll: true }); }
 }
 
 function viewHome() {
@@ -1554,7 +1565,7 @@ function viewSet() {
   const essCount = S.concepts.filter((c) => c.tier === "essential").length;
   let body = "";
   if (S.concepts.length) {
-    body = tab === "summary" ? viewSummary(list) : tab === "cards" ? viewCards(list) : tab === "cloze" ? viewCloze(list) : tab === "groups" ? viewGroups() : viewQuiz("essential");
+    body = tab === "summary" ? viewSummary(list) : tab === "cards" ? viewCards(list) : tab === "cloze" ? viewCloze(list) : tab === "groups" ? viewGroups() : tab === "drill" ? viewDrill(list) : viewQuiz("essential");
   }
   return `${setHeader(`<button class="btn sec" data-act="to-review">복습 화면</button>`)}
     ${errBox()}
@@ -1569,7 +1580,7 @@ function viewSet() {
       </div></details>` : ""}
     ${warnings.length ? `<details class="notice"><summary>자료 관련 안내 ${warnings.length}건</summary><ul class="small" style="margin-top:6px">${warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul></details>` : ""}
     ${S.concepts.length ? `
-      <div class="tabs" role="tablist">${[["summary", "핵심 요약"], ...(m.presetId === KS_PRESET.id ? [["groups", "모아보기"]] : []), ["cards", "암기 카드"], ["cloze", "빈칸 암기"], ["quiz", "실전 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${tab === id}" data-act="tab" data-tab="${id}">${l}</button>`).join("")}</div>
+      <div class="tabs" role="tablist">${[["summary", "핵심 요약"], ...(m.presetId === KS_PRESET.id ? [["groups", "모아보기"]] : []), ["cards", "암기 카드"], ["drill", "빈칸 훈련"], ["cloze", "빈칸 암기"], ["quiz", "실전 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${tab === id}" data-act="tab" data-tab="${id}">${l}</button>`).join("")}</div>
       ${tab !== "quiz" ? `<label class="row small muted"><input type="checkbox" id="only-ess" data-act="only-ess" ${S.onlyEss ? "checked" : ""}> ${tab === "groups" ? "교수님 표시 문항만 보기" : "필수 개념만 보기"} (${essCount}/${S.concepts.length})</label>` : ""}
       ${body}` : ""}`;
 }
@@ -1607,6 +1618,162 @@ function viewSummary(list) {
     ${rateRow(c)}
   </article>`).join("");
 }
+// ───────── 빈칸 훈련 (직접 타이핑하며 반복 암기) ─────────
+// 맞게 쓰면 바로 다음으로, 틀리면 정답을 따라 쓴 뒤 몇 문제 뒤에 다시 나온다.
+// 처음에 바로 맞힌 문제는 완료, 한 번이라도 틀린 문제는 연속 2번 맞혀야 완료.
+const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+const JUNG = ["ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅗㅏ", "ㅗㅐ", "ㅗㅣ", "ㅛ", "ㅜ", "ㅜㅓ", "ㅜㅔ", "ㅜㅣ", "ㅠ", "ㅡ", "ㅡㅣ", "ㅣ"];
+const JONG = ["", "ㄱ", "ㄲ", "ㄱㅅ", "ㄴ", "ㄴㅈ", "ㄴㅎ", "ㄷ", "ㄹ", "ㄹㄱ", "ㄹㅁ", "ㄹㅂ", "ㄹㅅ", "ㄹㅌ", "ㄹㅍ", "ㄹㅎ", "ㅁ", "ㅂ", "ㅂㅅ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
+const SPLIT = { ㄳ: "ㄱㅅ", ㄵ: "ㄴㅈ", ㄶ: "ㄴㅎ", ㄺ: "ㄹㄱ", ㄻ: "ㄹㅁ", ㄼ: "ㄹㅂ", ㄽ: "ㄹㅅ", ㄾ: "ㄹㅌ", ㄿ: "ㄹㅍ", ㅀ: "ㄹㅎ", ㅄ: "ㅂㅅ", ㅘ: "ㅗㅏ", ㅙ: "ㅗㅐ", ㅚ: "ㅗㅣ", ㅝ: "ㅜㅓ", ㅞ: "ㅜㅔ", ㅟ: "ㅜㅣ", ㅢ: "ㅡㅣ" };
+// 한글을 자모 단위로 풀어서, 조합 중인 글자도 "맞게 쓰는 중"인지 판단한다
+function jamo(str) {
+  let out = "";
+  for (const ch of str) {
+    const c = ch.charCodeAt(0) - 0xac00;
+    if (c >= 0 && c < 11172) out += CHO[Math.floor(c / 588)] + JUNG[Math.floor((c % 588) / 28)] + JONG[c % 28];
+    else out += SPLIT[ch] || ch;
+  }
+  return out;
+}
+const dnorm = (s) => str(s).replace(/[\s.,·()\-"'`『』「」<>《》〈〉\[\]~―—]/g, "").toLowerCase();
+function perms(arr) { return arr.length <= 1 ? [arr] : arr.flatMap((x, i) => perms([...arr.slice(0, i), ...arr.slice(i + 1)]).map((r) => [x, ...r])); }
+function drillAnswers(answer) {
+  const alts = new Set();
+  for (const a0 of str(answer).split(" / ")) for (const a of [a0, a0.replace(/\([^)]*\)/g, "")]) {
+    const toks = a.split(/\s*[·,]\s*/).filter(Boolean);
+    // '존스 · 헐버트 · 게일'처럼 나열된 답은 어떤 순서로 써도 정답
+    if (toks.length > 1 && toks.length <= 5) for (const pm of perms(toks)) alts.add(dnorm(pm.join("")));
+    alts.add(dnorm(a));
+  }
+  return [...alts].filter(Boolean);
+}
+const blankHtml = (n) => `<span class="dblank">${"＿".repeat(Math.min(8, Math.max(3, n)))}</span>`;
+function drillItems(list, src) {
+  const items = [];
+  if (src.startsWith("group")) {
+    const gs = src === "group" ? KS_GROUPS : KS_GROUPS.filter((g) => g.id === src.slice(6));
+    for (const g of gs) for (const [name, desc, ns] of groupEntries(g))
+      items.push({ key: `g:${name}`, prompt: `<span class="tiny muted">${esc(g.title)}</span><br>${esc(desc)}`, answer: name, cid: `k${ns[0]}` });
+    return items;
+  }
+  for (const c of list) {
+    const fills = src === "fill" ? (c.bank || []).filter((b) => b.type === "fill") : [];
+    if (fills.length) {
+      for (const f of fills) items.push({ key: `f:${f.question}`, prompt: esc(f.question).replace(/_{3,}/, blankHtml(f.answer.split(" / ")[0].length)), answer: f.answer, cid: c.id });
+      continue;
+    }
+    // 핵심 문장에서 키워드 하나씩 가리기
+    const kws = [...str(c.cloze).matchAll(/\[\[([^\]]+)\]\]/g)].map((m) => m[1]);
+    kws.forEach((kw, i) => {
+      let j = -1;
+      const html = esc(c.cloze).replace(/\[\[([^\]]+)\]\]/g, (_, w) => (++j === i ? blankHtml(w.length) : `<b>${w}</b>`));
+      items.push({ key: `c:${c.id}:${i}`, prompt: html, answer: kw, cid: c.id });
+    });
+  }
+  return items;
+}
+function startDrill(list) {
+  const d = S.drill;
+  let items = drillItems(list, d.src);
+  if (d.order === "shuffle") items = shuffle(items);
+  else items.sort((a, b) => priority(prog(S.concepts.find((c) => c.id === b.cid) || {})) - priority(prog(S.concepts.find((c) => c.id === a.cid) || {})));
+  if (d.count) items = items.slice(0, d.count);
+  if (!items.length) { S.error = "훈련할 빈칸이 없습니다. 범위나 종류를 바꿔보세요."; return render(); }
+  const map = {};
+  for (const it of items) map[it.key] = { ...it, alts: drillAnswers(it.answer), missed: false, streak: 0, shown: 0 };
+  Object.assign(d, { phase: "run", items: map, queue: items.map((i) => i.key), total: items.length, done: 0, firstTry: 0, missedKeys: [], cur: null, mode: "answer", hint: 0, value: "" });
+  S.error = "";
+  drillNext();
+}
+function drillNext() {
+  const d = S.drill;
+  d.cur = d.queue.shift() || null; d.mode = "answer"; d.hint = 0; d.value = ""; d.lock = false;
+  if (!d.cur) d.phase = "done"; else d.items[d.cur].shown++;
+  render();
+}
+function drillState(value) {
+  const it = S.drill.items[S.drill.cur], v = dnorm(value), vj = jamo(v);
+  if (!v) return "empty";
+  if (it.alts.includes(v)) return "ok";
+  return it.alts.some((a) => jamo(a).startsWith(vj)) ? "typing" : "wrong";
+}
+function drillLive(el) {
+  const d = S.drill;
+  if (!d || d.phase !== "run" || d.lock) return;
+  d.value = el.value;
+  const st = drillState(el.value);
+  el.dataset.state = st;
+  const msg = $("#drill-msg");
+  if (msg) msg.textContent = st === "wrong" ? "철자가 달라요" : "";
+  if (st === "ok") { d.lock = true; setTimeout(() => { el.blur(); drillSuccess(); }, 180); }
+}
+function requeue(key, gap) { const q = S.drill.queue; q.splice(Math.min(gap, q.length), 0, key); }
+function drillSuccess() {
+  const d = S.drill, it = d.items[d.cur], c = S.concepts.find((x) => x.id === it.cid);
+  if (d.mode === "retype") { requeue(d.cur, 3); return drillNext(); }
+  if (d.hint) return drillMiss();
+  it.streak++;
+  if (!it.missed && it.shown === 1) d.firstTry++;
+  if (!it.missed || it.streak >= 2) { d.done++; if (c) saveProgress(c, applyVerdict(prog(c), "correct")); }
+  else requeue(d.cur, 6);
+  drillNext();
+}
+function drillMiss() {
+  const d = S.drill, it = d.items[d.cur], c = S.concepts.find((x) => x.id === it.cid);
+  if (!it.missed && c) saveProgress(c, applyVerdict(prog(c), "wrong"));
+  if (!it.missed) d.missedKeys.push(d.cur);
+  it.missed = true; it.streak = 0;
+  d.mode = "retype"; d.value = ""; d.lock = false;
+  render();
+}
+function drillSubmit() {
+  const d = S.drill;
+  if (!d || d.phase !== "run" || d.lock) return;
+  const el = $("#drill-in");
+  const st = drillState(el ? el.value : d.value);
+  if (st === "ok") { d.lock = true; return drillSuccess(); }
+  if (d.mode === "answer" && dnorm(el ? el.value : "")) return drillMiss();
+}
+function viewDrill(list) {
+  S.drill ||= { phase: "setup", src: S.meta.bankMode ? "fill" : "cloze", count: 20, order: "priority" };
+  const d = S.drill;
+  if (d.phase === "setup") {
+    const srcs = [["fill", "빈칸 문제"], ["cloze", "핵심 문장 빈칸"], ...(S.meta.presetId === KS_PRESET.id ? [["group", "모아보기 전체(인물·책·연도…)"], ...KS_GROUPS.map((g) => [`group:${g.id}`, g.title.replace(/ \(.*\)/, "")])] : [])];
+    const n = drillItems(list, d.src).length;
+    return `<section class="card">
+      <p class="small">말해보카처럼 빈칸을 직접 쓰며 외웁니다. 맞게 쓰면 바로 다음으로 넘어가고, 틀리면 정답을 따라 쓴 뒤 몇 문제 뒤에 다시 나옵니다. 틀렸던 빈칸은 연속 2번 맞혀야 완료됩니다.</p>
+      <div><p class="label">훈련할 빈칸</p><div class="row">${srcs.map(([v, l]) => `<button class="chip" data-act="drill-src" data-v="${v}" aria-pressed="${d.src === v}">${esc(l)}</button>`).join("")}</div></div>
+      <div><p class="label">한 번에 외울 개수</p><div class="row">${[[10, "10개"], [20, "20개"], [40, "40개"], [0, `전체 ${n}개`]].map(([v, l]) => `<button class="chip" data-act="drill-count" data-v="${v}" aria-pressed="${d.count === v}">${l}</button>`).join("")}</div></div>
+      <div><p class="label">순서</p><div class="row">${[["priority", "덜 외운 것부터"], ["shuffle", "무작위"]].map(([v, l]) => `<button class="chip" data-act="drill-order" data-v="${v}" aria-pressed="${d.order === v}">${l}</button>`).join("")}</div></div>
+      <button class="btn wide" data-act="drill-start" ${n ? "" : "disabled"}>훈련 시작 (${d.count ? Math.min(d.count, n) : n}개)</button>
+    </section>`;
+  }
+  if (d.phase === "done") {
+    const missed = d.missedKeys.map((k) => d.items[k]);
+    return `<section class="card" style="text-align:center">
+      <h2>${d.total}개 모두 외웠습니다</h2>
+      <p class="small muted">처음에 바로 맞힘 <b class="mono">${d.firstTry}</b>개 · 틀렸다가 외움 <b class="mono">${missed.length}</b>개</p>
+      ${missed.length ? `<div class="answerbox" style="text-align:left"><p class="label">틀렸던 빈칸</p>${missed.map((it) => `<p class="small"><b>${esc(it.answer.split(" / ")[0])}</b></p>`).join("")}</div>` : ""}
+      <div class="row" style="justify-content:center">${missed.length ? `<button class="btn" data-act="drill-missed">틀렸던 ${missed.length}개만 다시</button>` : ""}<button class="btn sec" data-act="drill-again">새로 시작</button></div>
+    </section>`;
+  }
+  const it = d.items[d.cur], c = S.concepts.find((x) => x.id === it.cid);
+  const main = it.answer.split(" / ")[0];
+  const hint = d.hint ? `<p class="small muted">힌트: <span class="mono">${esc(main.slice(0, d.hint))}${"＿".repeat(Math.max(0, main.length - d.hint))}</span></p>` : "";
+  const pct = Math.round((d.done / d.total) * 100);
+  return `<div class="between tiny muted"><span class="mono">완료 ${d.done} / ${d.total}</span><span>남은 문제 ${d.queue.length + 1}${it.missed && it.shown > 1 && d.mode === "answer" ? " · 다시 나온 문제" : ""}</span></div>${meter(pct)}
+    <section class="card drill">
+      <p class="dprompt">${it.prompt}</p>
+      ${d.mode === "retype" ? `<div class="answerbox"><p class="label">정답 — 따라 써 보세요</p><p class="dans">${esc(main)}</p>${it.answer.includes(" / ") ? `<p class="tiny muted">인정 답: ${esc(it.answer)}</p>` : ""}</div>` : ""}
+      <input id="drill-in" class="field dinput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${d.mode === "retype" ? "정답을 똑같이 입력" : "빈칸에 들어갈 말을 입력"}" data-state="empty">
+      <p id="drill-msg" class="tiny" style="color:var(--bad);min-height:1.2em"></p>
+      ${hint}
+      ${d.mode === "answer" ? `<div class="row"><button class="btn sec" data-act="drill-hint">힌트 (한 글자)</button><button class="btn sec" data-act="drill-giveup">모르겠어요</button><button class="btn" style="margin-left:auto" data-act="drill-submit">확인</button></div>` : ""}
+      ${c ? `<p class="tiny muted">출처 ${esc(src(c))}</p>` : ""}
+    </section>
+    <button class="btn ghost" data-act="drill-quit">그만하기</button>`;
+}
+
 // ───────── 모아보기 (한국학 산책: 인물·책·기관·용어·연도) ─────────
 function viewGroups() {
   return `<p class="tiny muted">준비자료 40문항에서 같은 성격의 암기거리를 묶었습니다. '카드로 외우기'를 누르면 설명을 보고 이름을 떠올리는 카드로 학습합니다.</p>` +
@@ -1697,28 +1864,56 @@ function viewCards(list) {
   const face = card.group
     ? (k.flipped ? `${badge("정답", "good")}<p class="q">${esc(card.back)}</p><p class="small muted" style="background:var(--surface);padding:0 6px">${esc(card.front)}</p><p class="tiny muted">출처 ${esc(src(c))}</p>` : `${badge("누구일까요? / 무엇일까요?", "acc")}<p class="q">${esc(card.front)}</p><p class="tiny muted">${AUTO.on ? "잠시 후 정답이 나옵니다" : "눌러서 정답 보기"}</p>`)
     : k.flipped
-    ? `${badge(card.memo ? "핵심 문장" : "정답", "good")}<p class="a">${card.memo ? memoText(card.back, true) : esc(card.back)}</p><p class="tiny muted">출처 ${esc(src(c))}</p>`
-    : `${badge(card.memo ? "빈칸을 떠올려 보세요" : "질문", "acc")}<p class="q">${card.memo ? memoText(card.front, false) : esc(card.front)}</p>${card.memo ? `<p class="tiny muted">${esc(c.title)}</p>` : ""}<p class="tiny muted">${AUTO.on ? "잠시 후 정답이 나옵니다" : "눌러서 정답 보기"}</p>`;
+    ? `${badge(card.memo ? "핵심 문장" : "정답", "good")}<p class="a">${card.memo ? memoText(card.back, true) : esc(card.back)}</p><p class="tiny muted">${esc(c.title)} · 출처 ${esc(src(c))}</p>`
+    : `${badge(card.memo ? "빈칸을 떠올려 보세요" : "질문", "acc")}<p class="q">${card.memo ? memoText(card.front, false) : esc(card.front)}</p>${card.memo ? `<p class="tiny muted">${esc(src(c))}</p>` : ""}<p class="tiny muted">${AUTO.on ? "잠시 후 정답이 나옵니다" : "눌러서 정답 보기"}</p>`;
   const timer = AUTO.on ? `<div class="tbar" style="animation-duration:${k.flipped ? AUTO.back : AUTO.front}s"></div>` : "";
   return controls + `<div class="between tiny muted"><span class="mono">${AUTO.rounds !== 1 || k.round > 1 ? `${k.round}회차 · ` : ""}${k.i + 1} / ${k.list.length}</span><span>${k.again.length ? `다시 볼 카드 ${k.again.length}장` : ""}</span></div>
     ${timer}<button class="flash" data-act="flip" aria-label="카드 뒤집기">${face}</button>
     ${k.flipped ? rateRow(c, "card-rate") : `<div class="between"><button class="btn ghost" data-act="card-prev" ${k.i ? "" : "disabled"}>이전</button><button class="btn ghost" data-act="card-next">건너뛰기</button></div>`}`;
 }
 function clozeParts(text) { return str(text).split(/(\[\[[^\]]+\]\])/g).filter((p) => p !== "").map((p) => (p.startsWith("[[") ? { blank: p.slice(2, -2) } : { text: p })); }
+// 빈칸 사이가 '·', ',', '와/과' 같은 구분자뿐이면 하나의 묶음 → 순서를 바꿔 써도 정답
+function blankGroups(cloze) {
+  const parts = clozeParts(cloze), groups = [];
+  let j = -1, cur = null, between = null;
+  for (const p of parts) {
+    if (p.text !== undefined) { between = p.text; continue; }
+    j++;
+    if (cur && between !== null && /^\s*(·|,|、|\/|와|과|및|그리고)?\s*$/.test(between)) cur.push(j);
+    else { cur = [j]; groups.push(cur); }
+    between = null;
+  }
+  return groups;
+}
+function gradeCloze(cloze, inputs) {
+  const blanks = clozeParts(cloze).filter((p) => p.blank !== undefined).map((p) => p.blank);
+  const ok = blanks.map(() => false), fix = [...blanks];
+  for (const g of blankGroups(cloze)) {
+    const unused = g.map((i) => blanks[i]);
+    for (const i of g) {
+      const k = unused.findIndex((a) => norm(a) === norm(inputs[i] || ""));
+      if (k >= 0) { ok[i] = true; unused.splice(k, 1); }
+    }
+    for (const i of g) if (!ok[i]) fix[i] = unused.shift() || blanks[i];
+  }
+  return { ok, fix };
+}
 function viewCloze(list) {
   const items = list.filter((c) => /\[\[[^\]]+\]\]/.test(c.cloze));
   if (!items.length) return `<div class="card muted">빈칸 문장이 없습니다.</div>`;
-  return `<p class="tiny muted">빈칸에 들어갈 핵심 키워드를 쓰고 정답을 확인하세요. 틀리면 복습 목록에 들어갑니다. Enter로 확인할 수 있습니다.</p>` + items.map((c) => {
+  return `<p class="tiny muted">빈칸에 들어갈 핵심 키워드를 쓰고 정답을 확인하세요. '·'나 ','로 나열된 빈칸은 순서를 바꿔 써도 정답입니다. 문항 제목은 확인 후에 보입니다. Enter로 확인할 수 있습니다.</p>` + items.map((c) => {
     const st = S.clozeState[c.id];
+    const g = st && st.checked ? gradeCloze(c.cloze, st.inputs) : null;
     let j = -1;
     const html = clozeParts(c.cloze).map((p) => {
       if (p.text !== undefined) return esc(p.text);
       j++;
       const val = st ? st.inputs[j] || "" : S.clozeDraft[`${c.id}-${j}`] || "";
-      const cls = st && st.checked ? (norm(val) === norm(p.blank) ? "ok" : "no") : "";
-      return `<input id="cz-${c.id}-${j}" data-cz="${c.id}" data-j="${j}" aria-label="빈칸 ${j + 1}" class="${cls}" value="${esc(val)}" ${st && st.checked ? "disabled" : ""}>${st && st.checked && cls === "no" ? `<span class="fix">${esc(p.blank)}</span>` : ""}`;
+      const cls = g ? (g.ok[j] ? "ok" : "no") : "";
+      return `<input id="cz-${c.id}-${j}" data-cz="${c.id}" data-j="${j}" aria-label="빈칸 ${j + 1}" class="${cls}" value="${esc(val)}" ${g ? "disabled" : ""}>${g && !g.ok[j] ? `<span class="fix">${esc(g.fix[j])}</span>` : ""}`;
     }).join("");
-    return `<article class="card">${conceptHead(c)}<p class="cloze">${html}</p>
+    const head = g ? conceptHead(c) : `<div class="between"><span class="small muted">${esc(src(c))}</span>${statusBadge(c)}</div>`;
+    return `<article class="card">${head}<p class="cloze">${html}</p>
       <div class="between"><span class="tiny muted">출처 ${esc(src(c))}</span>${st && st.checked ? `<button class="btn sec" data-act="cz-reset" data-id="${c.id}">다시 풀기</button>` : `<button class="btn" data-act="cz-check" data-id="${c.id}">정답 확인</button>`}</div></article>`;
   }).join("");
 }
@@ -2030,6 +2225,22 @@ const ACTIONS = {
   "card-next": () => { S.cards.i++; S.cards.flipped = false; render(); autoStep(); },
   "cards-restart": () => { stopAuto(); S.cards = null; render(); },
   "card-mode": (el) => { S.cardMode = el.dataset.v; S.cards = null; render(); },
+  "drill-src": (el) => { S.drill.src = el.dataset.v; render(); },
+  "drill-count": (el) => { S.drill.count = +el.dataset.v; render(); },
+  "drill-order": (el) => { S.drill.order = el.dataset.v; render(); },
+  "drill-start": () => startDrill(S.onlyEss ? S.concepts.filter((c) => c.tier === "essential") : S.concepts),
+  "drill-submit": () => drillSubmit(),
+  "drill-hint": () => { const d = S.drill, el = $("#drill-in"); d.value = el ? el.value : d.value; d.hint = Math.min(d.hint + 1, d.items[d.cur].answer.split(" / ")[0].length); render(); },
+  "drill-giveup": () => drillMiss(),
+  "drill-quit": () => { S.drill.phase = "setup"; render(); },
+  "drill-again": () => { S.drill.phase = "setup"; render(); },
+  "drill-missed": () => {
+    const d = S.drill, keys = d.missedKeys;
+    for (const k of keys) Object.assign(d.items[k], { missed: false, streak: 0, shown: 0 });
+    Object.assign(d, { phase: "run", queue: [...keys], total: keys.length, done: 0, firstTry: 0, missedKeys: [] });
+    for (const k of Object.keys(d.items)) if (!keys.includes(k)) delete d.items[k];
+    drillNext();
+  },
   "group-cards": (el) => { S.cardKind = `group:${el.dataset.g}`; S.cards = null; S.tab = "cards"; render(); window.scrollTo(0, 0); },
   "card-kind": (el) => { S.cardKind = el.dataset.v; S.cards = null; render(); },
   "cards-again": () => { const was = AUTO.onlyMissed; AUTO.onlyMissed = true; nextRound(); AUTO.onlyMissed = was; render(); autoStep(); },
@@ -2041,11 +2252,10 @@ const ACTIONS = {
     AUTO.on = true; render(); autoStep();
   },
   "cz-check": (el) => {
-    const c = S.concepts.find((x) => x.id === el.dataset.id), blanks = clozeParts(c.cloze).filter((p) => p.blank !== undefined);
-    const inputs = blanks.map((_, j) => ($(`#cz-${c.id}-${j}`) || {}).value || "");
+    const c = S.concepts.find((x) => x.id === el.dataset.id), n = clozeParts(c.cloze).filter((p) => p.blank !== undefined).length;
+    const inputs = Array.from({ length: n }, (_, j) => ($(`#cz-${c.id}-${j}`) || {}).value || "");
     S.clozeState[c.id] = { inputs, checked: true };
-    const allOk = blanks.every((b, j) => norm(inputs[j]) === norm(b.blank));
-    saveProgress(c, applySelf(prog(c), allOk ? "know" : "unsure"));
+    saveProgress(c, applySelf(prog(c), gradeCloze(c.cloze, inputs).ok.every(Boolean) ? "know" : "unsure"));
   },
   "cz-reset": (el) => { delete S.clozeState[el.dataset.id]; for (const k of Object.keys(S.clozeDraft)) if (k.startsWith(el.dataset.id + "-")) delete S.clozeDraft[k]; render(); },
   "q-scope": (el) => { S.quiz.scope = el.dataset.s; render(); },
@@ -2085,6 +2295,7 @@ document.addEventListener("change", (e) => {
   }
 });
 document.addEventListener("input", (e) => {
+  if (e.target.id === "drill-in") return drillLive(e.target);
   const el = e.target, d = S.draft;
   if (el.dataset.draft && d) d[el.dataset.draft] = el.value;
   else if (el.dataset.lec && d) { const u = d.uploads.find((x) => x.key === el.dataset.lec); if (u) u.lecture = el.value; }
@@ -2100,7 +2311,20 @@ document.addEventListener("input", (e) => {
     const w = $("#w-msg"); if (w) w.textContent = ck.weightOk ? "" : `비중 합계 ${ck.sum}%`;
   }
 });
+let drillEnterPending = false, drillLastSubmit = 0;
+document.addEventListener("compositionend", (e) => {
+  if (e.target.id !== "drill-in") return;
+  drillLive(e.target);
+  if (drillEnterPending) { drillEnterPending = false; drillLastSubmit = Date.now(); setTimeout(drillSubmit, 0); }
+});
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.id === "drill-in") {
+    e.preventDefault();
+    if (e.isComposing) { drillEnterPending = true; return; }
+    if (Date.now() - drillLastSubmit < 150) return;
+    drillLastSubmit = Date.now();
+    return drillSubmit();
+  }
   if (e.key !== "Enter" || e.isComposing) return;
   const el = e.target;
   if (el.id === "q-ans" && el.tagName === "INPUT" && S.busy !== "grade") { e.preventDefault(); ACTIONS["q-submit"](); }
