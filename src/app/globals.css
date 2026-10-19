@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef6f6;
+  --color-brand-100: #d5eaea;
+  --color-brand-500: #2f7f86;
+  --color-brand-600: #256970;
+  --color-brand-700: #1d5459;
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+}
+
+body {
+  background: #f7f8fa;
+  color: #1f2933;
+}
