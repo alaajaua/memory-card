@@ -132,6 +132,7 @@ textarea.field { resize: vertical; }
 .glist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
 .glist li { padding: 9px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
 .glist li:first-child { border-top: 0; }
+.btn.small { padding: 4px 8px; font-size: 0.78rem; }
 .flash mark { padding: 0 4px; }
 .flash .blank { color: var(--accent); letter-spacing: 1px; }
 .tbar { height: 3px; background: var(--accent); border-radius: 2px; animation: tb linear forwards; }
@@ -1196,11 +1197,25 @@ function priority(p) {
   return s;
 }
 const isWeak = (p) => p.status === "review" || (p.status !== "mastered" && (p.selfRating === "unsure" || p.selfRating === "dontknow"));
-const weakConcepts = () => S.concepts.filter((c) => isWeak(prog(c))).sort((a, b) => priority(prog(b)) - priority(prog(a)));
+// ───────── 다시 공부하지 않아도 되는 항목 (제외 목록) ─────────
+// key: 개념 id(문항 전체) 또는 카드·빈칸·문제 하나의 키. meta.skip에 저장한다.
+const skipSet = () => new Set((S.meta && S.meta.skip ? S.meta.skip : []).map((x) => x.key));
+const conceptSkipped = (c) => skipSet().has(c.id);
+const itemSkipped = (key, cid) => { const st = skipSet(); return st.has(key) || (cid && st.has(cid)); };
+async function saveSkip(list) {
+  S.meta.skip = list;
+  render();
+  try { await patch(P.set(S.meta.id), { skip: list }); } catch (e) { S.error = dbErrorText(e); render(); }
+}
+function addSkip(key, label) {
+  if (skipSet().has(key)) return;
+  saveSkip([...(S.meta.skip || []), { key, label: str(label).slice(0, 140), at: Date.now() }]);
+}
+const weakConcepts = () => S.concepts.filter((c) => !conceptSkipped(c) && isWeak(prog(c))).sort((a, b) => priority(prog(b)) - priority(prog(a)));
 function stats() {
   const ess = S.concepts.filter((c) => c.tier === "essential");
   const essential = { mastered: 0, review: 0, unlearned: 0 };
-  for (const c of ess) essential[prog(c).status]++;
+  for (const c of ess) essential[conceptSkipped(c) ? "mastered" : prog(c).status]++;
   const by = {};
   for (const a of S.attempts) {
     const t = (by[a.question.type] ||= { total: 0, score: 0 });
@@ -1568,7 +1583,7 @@ function viewSet() {
   const m = S.meta;
   const analyzing = m.chunksDone < m.chunksTotal;
   const tab = S.tab || defaultTab(m.settings);
-  const list = S.onlyEss ? S.concepts.filter((c) => c.tier === "essential") : S.concepts;
+  const list = (S.onlyEss ? S.concepts.filter((c) => c.tier === "essential") : S.concepts).filter((c) => !conceptSkipped(c));
   const warnings = [...m.materials.flatMap((x) => (x.warnings || []).map((w) => `${x.lecture}: ${w}`)), ...(m.notes || [])];
   const essCount = S.concepts.filter((c) => c.tier === "essential").length;
   let body = "";
@@ -1589,6 +1604,7 @@ function viewSet() {
     ${warnings.length ? `<details class="notice"><summary>자료 관련 안내 ${warnings.length}건</summary><ul class="small" style="margin-top:6px">${warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul></details>` : ""}
     ${S.concepts.length ? `
       <div class="tabs" role="tablist">${[["summary", "핵심 요약"], ...(m.presetId === KS_PRESET.id ? [["groups", "모아보기"]] : []), ["cards", "암기 카드"], ["drill", "빈칸 훈련"], ["cloze", "빈칸 암기"], ["quiz", "실전 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${tab === id}" data-act="tab" data-tab="${id}">${l}</button>`).join("")}</div>
+      ${(m.skip || []).length ? `<p class="tiny muted">다시 안 보기로 뺀 항목 ${(m.skip || []).length}개는 학습에서 빠져 있습니다. <button class="btn ghost small" data-act="go-skip">관리·되돌리기</button></p>` : ""}
       ${tab !== "quiz" ? `<label class="row small muted"><input type="checkbox" id="only-ess" data-act="only-ess" ${S.onlyEss ? "checked" : ""}> ${tab === "groups" ? "교수님 표시 문항만 보기" : "필수 개념만 보기"} (${essCount}/${S.concepts.length})</label>` : ""}
       ${body}` : ""}`;
 }
@@ -1622,7 +1638,7 @@ function viewSummary(list) {
     ${s.types.includes("brief") && c.briefAnswer ? `<div><p class="label">약술형 모범답안</p><p class="small">${esc(c.briefAnswer)}</p></div>` : ""}
     ${s.types.includes("essay") && c.essayOutline.length ? `<div><p class="label">서술형 답안 구조</p><ol class="small">${c.essayOutline.map((o) => `<li>${esc(o)}</li>`).join("")}</ol></div>` : ""}
     ${c.confusions.length ? `<div><p class="label">헷갈리기 쉬운 개념</p>${c.confusions.map((x) => `<p class="small"><b>vs ${esc(x.other)}</b> · ${esc(x.difference)}</p>`).join("")}</div>` : ""}
-    <p class="tiny muted">출처 ${esc(src(c))}</p>
+    <div class="between"><p class="tiny muted">출처 ${esc(src(c))}</p><button class="btn ghost small" data-act="skip-concept" data-id="${c.id}">다시 공부 안 함</button></div>
     ${rateRow(c)}
   </article>`).join("");
 }
@@ -1661,13 +1677,13 @@ function drillItems(list, src) {
   if (src.startsWith("group")) {
     const gs = src === "group" ? KS_GROUPS : KS_GROUPS.filter((g) => g.id === src.slice(6));
     for (const g of gs) for (const [name, desc, ns] of groupEntries(g))
-      items.push({ key: `g:${name}`, prompt: `<span class="tiny muted">${esc(g.title)}</span><br>${esc(desc)}`, answer: name, cid: `k${ns[0]}` });
+      if (!itemSkipped(`g:${name}`)) items.push({ key: `g:${name}`, prompt: `<span class="tiny muted">${esc(g.title)}</span><br>${esc(desc)}`, answer: name, cid: `k${ns[0]}` });
     return items;
   }
   for (const c of list) {
     const fills = src === "fill" ? (c.bank || []).filter((b) => b.type === "fill") : [];
     if (fills.length) {
-      for (const f of fills) items.push({ key: `f:${f.question}`, prompt: esc(f.question).replace(/_{3,}/, blankHtml(f.answer.split(" / ")[0].length)), answer: f.answer, cid: c.id });
+      for (const f of fills) if (!itemSkipped(`f:${f.question}`)) items.push({ key: `f:${f.question}`, prompt: esc(f.question).replace(/_{3,}/, blankHtml(f.answer.split(" / ")[0].length)), answer: f.answer, cid: c.id });
       continue;
     }
     // 핵심 문장에서 키워드 하나씩 가리기
@@ -1675,7 +1691,7 @@ function drillItems(list, src) {
     kws.forEach((kw, i) => {
       let j = -1;
       const html = esc(c.cloze).replace(/\[\[([^\]]+)\]\]/g, (_, w) => (++j === i ? blankHtml(w.length) : `<b>${w}</b>`));
-      items.push({ key: `c:${c.id}:${i}`, prompt: html, answer: kw, cid: c.id });
+      if (!itemSkipped(`c:${c.id}:${i}`)) items.push({ key: `c:${c.id}:${i}`, prompt: html, answer: kw, cid: c.id });
     });
   }
   return items;
@@ -1776,7 +1792,7 @@ function viewDrill(list) {
       <input id="drill-in" class="field dinput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${d.mode === "retype" ? "정답을 똑같이 입력" : "빈칸에 들어갈 말을 입력"}" data-state="empty">
       <p id="drill-msg" class="tiny" style="color:var(--bad);min-height:1.2em"></p>
       ${hint}
-      ${d.mode === "answer" ? `<div class="row"><button class="btn sec" data-act="drill-hint">힌트 (한 글자)</button><button class="btn sec" data-act="drill-giveup">모르겠어요</button><button class="btn" style="margin-left:auto" data-act="drill-submit">확인</button></div>` : ""}
+      ${d.mode === "answer" ? `<div class="row"><button class="btn sec" data-act="drill-hint">힌트 (한 글자)</button><button class="btn sec" data-act="drill-giveup">모르겠어요</button><button class="btn ghost" data-act="drill-skip" title="이 빈칸을 앞으로 훈련에서 빼기">이미 알아요 · 다시 안 보기</button><button class="btn" style="margin-left:auto" data-act="drill-submit">확인</button></div>` : ""}
       ${c ? `<p class="tiny muted">출처 ${esc(src(c))}</p>` : ""}
     </section>
     <button class="btn ghost" data-act="drill-quit">그만하기</button>`;
@@ -1808,11 +1824,11 @@ function buildCards(list) {
   const mode = S.cardMode || "priority", kind = S.cardKind || "memo";
   if (kind.startsWith("group:")) {
     const g = KS_GROUPS.find((x) => x.id === kind.slice(6));
-    const cards = g ? groupEntries(g).map(([name, desc, ns]) => ({ front: desc, back: name, cid: `k${ns[0]}`, group: true })) : [];
+    const cards = g ? groupEntries(g).map(([name, desc, ns]) => ({ front: desc, back: name, cid: `k${ns[0]}`, group: true, key: `g:${name}` })).filter((x) => !itemSkipped(x.key)) : [];
     return mode === "shuffle" ? shuffle(cards) : cards;
   }
   const ordered = mode === "shuffle" ? list : [...list].sort((a, b) => priority(prog(b)) - priority(prog(a)));
-  const all = ordered.flatMap((c) => (kind === "memo" ? memoCards(c) : c.flashcards.map((f) => ({ ...f, cid: c.id }))));
+  const all = ordered.flatMap((c) => (kind === "memo" ? memoCards(c).map((x) => ({ ...x, key: `m:${c.id}` })) : c.flashcards.map((f) => ({ ...f, cid: c.id, key: `q:${f.front}` })))).filter((x) => !itemSkipped(x.key));
   return mode === "shuffle" ? shuffle(all) : all;
 }
 function stopAuto() { AUTO.on = false; clearTimeout(AUTO.timer); }
@@ -1877,7 +1893,8 @@ function viewCards(list) {
   const timer = AUTO.on ? `<div class="tbar" style="animation-duration:${k.flipped ? AUTO.back : AUTO.front}s"></div>` : "";
   return controls + `<div class="between tiny muted"><span class="mono">${AUTO.rounds !== 1 || k.round > 1 ? `${k.round}회차 · ` : ""}${k.i + 1} / ${k.list.length}</span><span>${k.again.length ? `다시 볼 카드 ${k.again.length}장` : ""}</span></div>
     ${timer}<button class="flash" data-act="flip" aria-label="카드 뒤집기">${face}</button>
-    ${k.flipped ? rateRow(c, "card-rate") : `<div class="between"><button class="btn ghost" data-act="card-prev" ${k.i ? "" : "disabled"}>이전</button><button class="btn ghost" data-act="card-next">건너뛰기</button></div>`}`;
+    ${k.flipped ? rateRow(c, "card-rate") : `<div class="between"><button class="btn ghost" data-act="card-prev" ${k.i ? "" : "disabled"}>이전</button><button class="btn ghost" data-act="card-next">건너뛰기</button></div>`}
+    <div style="text-align:center"><button class="btn ghost small" data-act="card-skip">이 카드 다시 안 보기</button></div>`;
 }
 function clozeParts(text) { return str(text).split(/(\[\[[^\]]+\]\])/g).filter((p) => p !== "").map((p) => (p.startsWith("[[") ? { blank: p.slice(2, -2) } : { text: p })); }
 // 빈칸 사이가 '·', ',', '와/과' 같은 구분자뿐이면 하나의 묶음 → 순서를 바꿔 써도 정답
@@ -1922,7 +1939,7 @@ function viewCloze(list) {
     }).join("");
     const head = g ? conceptHead(c) : `<div class="between"><span class="small muted">${esc(src(c))}</span>${statusBadge(c)}</div>`;
     return `<article class="card">${head}<p class="cloze">${html}</p>
-      <div class="between"><span class="tiny muted">출처 ${esc(src(c))}</span>${st && st.checked ? `<button class="btn sec" data-act="cz-reset" data-id="${c.id}">다시 풀기</button>` : `<button class="btn" data-act="cz-check" data-id="${c.id}">정답 확인</button>`}</div></article>`;
+      <div class="between"><span class="row"><span class="tiny muted">출처 ${esc(src(c))}</span><button class="btn ghost small" data-act="skip-concept" data-id="${c.id}">다시 공부 안 함</button></span>${st && st.checked ? `<button class="btn sec" data-act="cz-reset" data-id="${c.id}">다시 풀기</button>` : `<button class="btn" data-act="cz-check" data-id="${c.id}">정답 확인</button>`}</div></article>`;
   }).join("");
 }
 
@@ -1931,7 +1948,7 @@ const SCOPE = { essential: "필수 개념", all: "전체 개념", weak: "취약 
 const scopeLabel = (s) => (S.meta && S.meta.bankMode && s === "essential" ? "교수님 표시" : SCOPE[s]);
 function newQuiz(scope) { return { scope, types: [...S.meta.settings.types], count: S.meta.bankMode ? 20 : 5, questions: null, i: 0, answer: "", result: null, score: [] }; }
 function pickConcepts(scope, limit = 12) {
-  const pool = scope === "weak" ? weakConcepts() : S.concepts.filter((c) => scope === "all" || c.tier === "essential");
+  const pool = scope === "weak" ? weakConcepts() : S.concepts.filter((c) => !conceptSkipped(c) && (scope === "all" || c.tier === "essential"));
   return pool.map((c) => ({ c, p: priority(prog(c)) + Math.random() })).sort((a, b) => b.p - a.p).slice(0, limit).map((x) => x.c);
 }
 function viewQuiz(defaultScope) {
@@ -1984,6 +2001,7 @@ function viewQuiz(defaultScope) {
       <p class="small"><span class="label">해설 </span>${esc(item.explanation)}</p>
       <p class="point small"><b>암기 포인트</b> ${esc(item.keyPoint)}</p>
       ${c ? `<p class="tiny muted">출처 ${esc(src(c))} · 개념 ${esc(c.title)}</p>` : ""}
+      ${S.meta.bankMode && item.question ? `<button class="btn ghost small" data-act="q-skip-item">${itemSkipped(`b:${item.question}`) ? "다시 안 보기로 뺐습니다" : "이 문제 다시 안 보기"}</button>` : ""}
       <button class="btn wide" data-act="q-next">${q.i + 1 < q.questions.length ? "다음 문제" : "결과 보기"}</button>
     </div>` : "";
   return `<div class="between tiny muted"><span class="mono">${q.i + 1} / ${q.questions.length}</span>${badge(QT[item.type])}</div>
@@ -2019,12 +2037,19 @@ function viewReview() {
         <p>${esc(q.explanation)}</p><p class="point">${esc(q.keyPoint)}</p>
         ${c ? `<p class="tiny muted">출처 ${esc(src(c))}</p>` : ""}</article>`;
     }).join("") : `<div class="card muted" style="text-align:center">아직 틀린 문제가 없습니다.</div>`;
+  } else if (t === "skip") {
+    const sk = [...(S.meta.skip || [])].sort((a, b) => b.at - a.at);
+    body = sk.length ? `<section class="card">
+        <div class="between"><p class="small">다시 공부하지 않기로 뺀 항목 <b class="mono">${sk.length}</b>개 · 요약·카드·빈칸·훈련·테스트에 나오지 않습니다.</p>
+        ${S.confirmReset ? `<span class="row"><span class="small" style="color:var(--bad)">모두 되돌릴까요?</span><button class="btn" data-act="skip-reset-yes">모두 되돌리기</button><button class="btn sec" data-act="skip-reset-no">취소</button></span>` : `<button class="btn sec" data-act="skip-reset">전체 리셋</button>`}</div>
+        <ul class="glist">${sk.map((x) => `<li><div class="between"><div style="min-width:0;flex:1"><span class="tiny muted">${!x.key.includes(":") ? "문항 전체" : { g: "모아보기", f: "빈칸 문제", c: "핵심 문장 빈칸", m: "암기 카드", q: "문제 카드", b: "실전 문제" }[x.key[0]] || "항목"}</span><p class="small">${esc(x.label)}</p></div><button class="btn ghost small" data-act="skip-undo" data-key="${esc(x.key)}">되돌리기</button></div></li>`).join("")}</ul>
+      </section>` : `<div class="card muted" style="text-align:center">다시 안 보기로 뺀 항목이 없습니다. 학습 화면의 '다시 공부 안 함', 카드의 '이 카드 다시 안 보기', 빈칸 훈련의 '이미 알아요'로 뺄 수 있습니다.</div>`;
   } else {
     body = viewQuiz("weak");
   }
   return `${setHeader(`<button class="btn sec" data-act="to-set">학습 화면</button>`)}
     ${errBox()}${dashboard()}
-    <div class="tabs" role="tablist">${[["weak", `취약 개념 ${weak.length}`], ["wrong", `오답 목록 ${wrong.length}`], ["test", "취약 개념 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${t === id}" data-act="rtab" data-t="${id}">${l}</button>`).join("")}</div>
+    <div class="tabs" role="tablist">${[["weak", `취약 개념 ${weak.length}`], ["wrong", `오답 목록 ${wrong.length}`], ["test", "취약 개념 테스트"], ["skip", `다시 안 보기 ${(S.meta.skip || []).length}`]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${t === id}" data-act="rtab" data-t="${id}">${l}</button>`).join("")}</div>
     ${body}`;
 }
 
@@ -2110,7 +2135,7 @@ function bankQuiz(q) {
   const concepts = pickConcepts(q.scope, Infinity);
   const asked = new Map();
   for (const a of S.attempts) asked.set(a.question.question, (asked.get(a.question.question) || 0) + 1);
-  const pools = concepts.map((c) => shuffle((c.bank || []).filter((b) => q.types.includes(b.type)))
+  const pools = concepts.map((c) => shuffle((c.bank || []).filter((b) => q.types.includes(b.type) && !itemSkipped(`b:${b.question}`)))
     .sort((a, b) => (asked.get(a.question) || 0) - (asked.get(b.question) || 0))
     .map((b) => ({ ...b, conceptId: c.id }))).filter((p) => p.length);
   const out = [];
@@ -2236,10 +2261,28 @@ const ACTIONS = {
   "drill-src": (el) => { S.drill.src = el.dataset.v; render(); },
   "drill-count": (el) => { S.drill.count = +el.dataset.v; render(); },
   "drill-order": (el) => { S.drill.order = el.dataset.v; render(); },
-  "drill-start": () => startDrill(S.onlyEss ? S.concepts.filter((c) => c.tier === "essential") : S.concepts),
+  "drill-start": () => startDrill((S.onlyEss ? S.concepts.filter((c) => c.tier === "essential") : S.concepts).filter((c) => !conceptSkipped(c))),
   "drill-submit": () => drillSubmit(),
   "drill-hint": () => { const d = S.drill, el = $("#drill-in"); d.value = el ? el.value : d.value; d.hint = Math.min(d.hint + 1, d.items[d.cur].answer.split(" / ")[0].length); render(); },
   "drill-giveup": () => drillMiss(),
+  "drill-skip": () => {
+    const d = S.drill, it = d.items[d.cur];
+    addSkip(d.cur, `${it.answer.split(" / ")[0]} — ${it.prompt.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}`);
+    d.total--; drillNext();
+  },
+  "skip-concept": (el) => { const c = S.concepts.find((x) => x.id === el.dataset.id); S.cards = null; addSkip(c.id, c.title); },
+  "card-skip": () => {
+    const k = S.cards, card = k.list[k.i];
+    addSkip(card.key, card.group ? `${card.back} — ${card.front}` : card.memo ? str(card.front).replace(/\[\[|\]\]/g, "") : `${card.front} → ${card.back}`);
+    k.list.splice(k.i, 1); k.flipped = false; k.again = k.again.filter((x) => x !== k.i).map((x) => (x > k.i ? x - 1 : x));
+    render(); autoStep();
+  },
+  "q-skip-item": () => { const it = S.quiz.questions[S.quiz.i]; addSkip(`b:${it.question}`, `${it.question} (정답: ${it.answer})`); },
+  "skip-undo": (el) => { S.cards = null; saveSkip((S.meta.skip || []).filter((x) => x.key !== el.dataset.key)); },
+  "skip-reset": () => { S.confirmReset = true; render(); },
+  "skip-reset-no": () => { S.confirmReset = false; render(); },
+  "skip-reset-yes": () => { S.confirmReset = false; S.cards = null; saveSkip([]); },
+  "go-skip": () => { S.view = "review"; S.reviewTab = "skip"; S.quiz = null; render(); window.scrollTo(0, 0); },
   "drill-quit": () => { S.drill.phase = "setup"; render(); },
   "drill-again": () => { S.drill.phase = "setup"; render(); },
   "drill-missed": () => {
