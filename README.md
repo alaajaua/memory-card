@@ -21,6 +21,14 @@
 
 기존 "CIT 대본 암기카드" 페이지는 `public/legacy/`로 옮겨져 있으며 `/legacy/index.html`에서 그대로 열립니다.
 
+## Claude 아티팩트 버전
+
+`artifact/exam-helper.html`은 같은 기능을 claude.ai 아티팩트 한 페이지로 옮긴 버전입니다.
+서버나 API Key 없이 아티팩트의 Claude 호출 기능(sample)으로 분석·문제 생성·채점을 하고,
+학습 기록은 내 계정 전용 저장소(db, `data/users/<내 id>/`)에 저장합니다. 파일은 브라우저에서 읽고 추출한 글자만 저장합니다.
+
+- 게시 주소: https://claude.ai/artifact/FYkDNN29ey57fX4NnrmCZw (비공개, 소유자만 열람)
+
 ## 실행 방법
 
 필요: Node.js 20 이상

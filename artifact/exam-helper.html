@@ -1,0 +1,1035 @@
+<title>시험 맞춤 암기 도우미</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+/* Layout: 한 줄 상단바 + 720px 단일 컬럼 노트. 카드는 "색인 카드"처럼 쓰는 곳에만. */
+:root {
+  --bg: #f4f6f3;
+  --surface: #ffffff;
+  --ink: #1d2421;
+  --muted: #5d6a64;
+  --line: #dbe2de;
+  --accent: #2b6e64;
+  --accent-ink: #ffffff;
+  --accent-soft: #e1eeea;
+  --mark: #ffe680;
+  --mark-ink: #3a3000;
+  --good: #2c8553;
+  --good-soft: #e3f3e9;
+  --warn: #a8701a;
+  --warn-soft: #fbf0dc;
+  --bad: #be4038;
+  --bad-soft: #fbe6e4;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131816; --surface: #1b2220; --ink: #e5ebe8; --muted: #9aa7a1; --line: #2d3733;
+    --accent: #6cc2b3; --accent-ink: #0f1a17; --accent-soft: #1d3430; --mark: #5c4f12; --mark-ink: #fff3c2;
+    --good: #62c48d; --good-soft: #17301f; --warn: #e3a94f; --warn-soft: #33270f; --bad: #ef7d73; --bad-soft: #3a1c19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131816; --surface: #1b2220; --ink: #e5ebe8; --muted: #9aa7a1; --line: #2d3733;
+  --accent: #6cc2b3; --accent-ink: #0f1a17; --accent-soft: #1d3430; --mark: #5c4f12; --mark-ink: #fff3c2;
+  --good: #62c48d; --good-soft: #17301f; --warn: #e3a94f; --warn-soft: #33270f; --bad: #ef7d73; --bad-soft: #3a1c19;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+h1, h2, h3 { text-wrap: balance; line-height: 1.3; margin: 0; }
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.05rem; }
+h3 { font-size: 0.98rem; }
+p { margin: 0; }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bar-in, .wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.bar-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 10px; }
+.brand { font-weight: 700; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; font-size: 1rem; }
+.wrap { padding-block: 20px 48px; display: flex; flex-direction: column; gap: 16px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.between { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 0.82rem; }
+.tiny { font-size: 0.75rem; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: var(--muted); }
+
+.btn { border: 1px solid transparent; border-radius: 8px; padding: 8px 14px; font-size: 0.9rem; font-weight: 500; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+.btn:hover:not(:disabled) { filter: brightness(1.06); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.sec { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn.ghost { background: transparent; color: var(--muted); }
+.btn.wide { width: 100%; padding-block: 11px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; cursor: pointer; text-align: left; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); font-weight: 500; }
+.badge { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 0.74rem; font-weight: 500; background: var(--bg); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
+.badge.acc { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.badge.good { background: var(--good-soft); color: var(--good); border-color: transparent; }
+.badge.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.badge.bad { background: var(--bad-soft); color: var(--bad); border-color: transparent; }
+mark, .kw { background: var(--mark); color: var(--mark-ink); padding: 0 4px; border-radius: 3px; }
+
+.meter { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.meter > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.stats b { display: block; font-size: 1.35rem; font-family: var(--font-mono); }
+.notice { border-radius: var(--r); padding: 12px 14px; font-size: 0.86rem; background: var(--warn-soft); color: var(--ink); border: 1px solid transparent; }
+.notice.err { background: var(--bad-soft); }
+.defn { background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; font-weight: 500; }
+
+.field { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; background: var(--surface); }
+textarea.field { resize: vertical; }
+.drop { display: block; border: 2px dashed var(--line); border-radius: var(--r); padding: 22px; text-align: center; cursor: pointer; color: var(--muted); }
+.drop:hover { border-color: var(--accent); }
+.file { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 0.88rem; }
+.file .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 4px; overflow-x: auto; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 49px); z-index: 4; }
+.tab { flex: 1; white-space: nowrap; border: 0; background: transparent; border-radius: 7px; padding: 7px 10px; font-size: 0.88rem; color: var(--muted); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 500; }
+
+.flash { min-height: 230px; width: 100%; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); padding: 28px 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; cursor: pointer;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 31px, var(--line) 31px 32px); background-position: 0 58px; }
+.flash .q { font-size: 1.12rem; font-weight: 500; background: var(--surface); padding: 0 6px; }
+.flash .a { white-space: pre-line; background: var(--surface); padding: 0 6px; }
+.flash .tiny, .flash .badge { background: var(--surface); padding-inline: 6px; }
+.rate { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.rate button { border-radius: 8px; padding: 9px 6px; font-size: 0.88rem; cursor: pointer; background: var(--surface); border: 1px solid var(--line); }
+.rate .r-know { color: var(--good); }
+.rate .r-unsure { color: var(--warn); }
+.rate .r-dontknow { color: var(--bad); }
+.rate button[aria-pressed="true"] { border-width: 2px; font-weight: 700; }
+.rate .r-know[aria-pressed="true"] { border-color: var(--good); }
+.rate .r-unsure[aria-pressed="true"] { border-color: var(--warn); }
+.rate .r-dontknow[aria-pressed="true"] { border-color: var(--bad); }
+
+.cloze { line-height: 2.4; }
+.cloze input { width: 8.5em; max-width: 60vw; border: 0; border-bottom: 2px solid var(--accent); background: var(--bg); text-align: center; padding: 2px 6px; margin: 0 4px; border-radius: 4px 4px 0 0; }
+.cloze input.ok { border-color: var(--good); color: var(--good); }
+.cloze input.no { border-color: var(--bad); color: var(--bad); }
+.cloze .fix { font-size: 0.78rem; color: var(--good); margin-right: 4px; }
+
+.choice { width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 10px 12px; cursor: pointer; display: flex; gap: 10px; }
+.choice:hover:not(:disabled) { border-color: var(--accent); }
+.choice.right { border-color: var(--good); background: var(--good-soft); }
+.choice.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.choice .n { color: var(--muted); font-family: var(--font-mono); }
+.answerbox { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.point { background: var(--mark); color: var(--mark-ink); border-radius: 8px; padding: 8px 12px; }
+.sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.dday { font-family: var(--font-mono); font-size: 0.8rem; color: var(--bad); font-weight: 500; }
+details summary { cursor: pointer; }
+ol, ul { margin: 0; padding-left: 1.3em; }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sp 0.8s linear infinite; vertical-align: -1px; margin-right: 6px; }
+@keyframes sp { to { transform: rotate(360deg); } }
+@media (max-width: 480px) { .stats b { font-size: 1.1rem; } .tab { padding: 7px 6px; font-size: 0.82rem; } }
+</style>
+
+<div class="bar"><div class="bar-in">
+  <button class="brand" data-act="home">시험 맞춤 암기 도우미</button>
+  <button class="btn sec" data-act="new" id="bar-new">+ 새 학습</button>
+</div></div>
+<main class="wrap" id="app"><p class="muted">불러오는 중…</p></main>
+
+<script>
+"use strict";
+// ───────── 상수 ─────────
+const QTYPES = ["mcq", "ox", "short", "fill", "brief", "essay"];
+const QT = { mcq: "객관식", ox: "OX", short: "단답형", fill: "빈칸 채우기", brief: "약술형", essay: "서술형" };
+const DIFF = { easy: "쉬움", normal: "보통", hard: "어려움" };
+const GOAL = { minimum: "최소 암기", standard: "일반 학습", high: "고득점 대비" };
+const GOAL_DESC = { minimum: "시험에 필요한 핵심만", standard: "주요 개념을 충분히", high: "세부 내용까지" };
+const STATUS = { unlearned: "미암기", review: "복습 필요", mastered: "암기 완료" };
+const STATUS_TONE = { unlearned: "", review: "warn", mastered: "good" };
+const VERDICT = { correct: "정답", partial: "부분 정답", wrong: "오답" };
+const CHUNK_CHARS = 30000;
+const MIN_TEXT = 15;
+
+// ───────── 상태 ─────────
+let DB = null, SAMPLE = null, BASE = "";
+const S = {
+  ready: false, unavailable: "", sets: null,
+  view: "home", setId: null, meta: null, concepts: [], attempts: [],
+  tab: null, onlyEss: true, reviewTab: "weak", busy: "", error: "",
+  draft: null, cards: null, quiz: null, confirmDelete: null, clozeState: {}, clozeDraft: {},
+};
+
+// ───────── 도우미 ─────────
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const str = (v) => (typeof v === "string" ? v : v == null ? "" : String(v));
+const arr = (v) => (Array.isArray(v) ? v : []);
+const strs = (v) => arr(v).map(str).filter(Boolean);
+const norm = (s) => str(s).replace(/[\s.,·()\-"'`]/g, "").toLowerCase();
+const clean = (s) => s.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+const $ = (sel) => document.querySelector(sel);
+
+function sampleErrorText(e) {
+  const code = e && e.code;
+  const map = {
+    not_granted: "Claude 사용이 허용되지 않았습니다. 페이지의 권한 메뉴에서 Claude 사용을 허용한 뒤 다시 시도하세요.",
+    sampling_disabled: "이 계정에서는 아티팩트의 Claude 호출을 사용할 수 없습니다.",
+    rate_limited: "Claude 사용 한도에 도달했거나 요청이 많습니다. 잠시 후 다시 시도하세요.",
+    session_expired: "로그인이 만료되었습니다. claude.ai에 다시 로그인하세요.",
+    prompt_too_large: "보낼 내용이 너무 깁니다. 자료를 나눠서 올려주세요.",
+    refused: "Claude가 이 내용에 응답하지 않았습니다. 자료 내용을 확인하세요.",
+    invalid_json: "AI 응답 형식을 해석하지 못했습니다. 다시 시도하세요.",
+    empty_completion: "AI가 빈 응답을 보냈습니다. 다시 시도하세요.",
+    cancelled: "취소되었습니다.",
+  };
+  return map[code] || "AI 요청 중 일시적인 오류가 발생했습니다. 다시 시도하세요.";
+}
+function dbErrorText(e) {
+  if (e && e.code === "quota_exceeded") return "저장 공간이 가득 찼습니다. 사용하지 않는 학습 세트를 삭제하세요.";
+  if (e && e.code === "invalid_argument") return "저장하지 못했습니다(데이터가 너무 크거나 형식이 잘못됨).";
+  return "저장소와 통신하지 못했습니다. 잠시 후 다시 시도하세요.";
+}
+
+// ───────── 저장소 (내 계정 전용 경로) ─────────
+const P = {
+  sets: () => `${BASE}/sets`,
+  set: (id) => `${BASE}/sets/${id}`,
+  chunks: (id) => `${BASE}/sets/${id}/chunks`,
+  concepts: (id) => `${BASE}/sets/${id}/concepts`,
+  attempts: (id) => `${BASE}/sets/${id}/attempts`,
+};
+async function retry(fn) {
+  try { return await fn(); }
+  catch (e) {
+    if (e && e.code === "unavailable") { await new Promise((r) => setTimeout(r, 400 + Math.random() * 600)); return fn(); }
+    throw e;
+  }
+}
+const getAll = async (path) => (await retry(() => DB.collection(path).limit(1000).get())).docs.map((d) => ({ id: d.id, ...d.data() }));
+const put = (path, data) => retry(() => DB.doc(path).set(data));
+const patch = (path, data) => retry(() => DB.doc(path).update(data));
+const remove = (path) => retry(() => DB.doc(path).delete());
+
+async function loadSets() {
+  try {
+    const sets = await getAll(P.sets());
+    for (const s of sets) {
+      // 진행률 표시를 위해 개념 수만 가볍게 계산 (메타에 캐시)
+      s.stat = s.stat || { essential: 0, mastered: 0 };
+    }
+    S.sets = sets.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  } catch (e) { S.sets = []; S.error = dbErrorText(e); }
+  render();
+}
+
+async function openSet(id, view = "set") {
+  S.view = view; S.setId = id; S.meta = null; S.concepts = []; S.attempts = []; S.tab = null; S.cards = null; S.quiz = null; S.error = "";
+  render();
+  try {
+    const meta = await retry(() => DB.doc(P.set(id)).get());
+    if (!meta.exists) { S.meta = false; return render(); }
+    S.meta = { id, ...meta.data() };
+    S.concepts = (await getAll(P.concepts(id))).sort((a, b) => (a.order || 0) - (b.order || 0));
+    S.attempts = (await getAll(P.attempts(id))).sort((a, b) => a.at - b.at);
+  } catch (e) { S.error = dbErrorText(e); }
+  render();
+}
+
+async function touchMeta() {
+  const st = stats();
+  S.meta.updatedAt = Date.now();
+  S.meta.stat = { essential: st.essentialTotal, mastered: st.essential.mastered };
+  try { await patch(P.set(S.meta.id), { updatedAt: S.meta.updatedAt, stat: S.meta.stat }); } catch (e) { /* 진행률 캐시는 다음 저장 때 다시 시도 */ }
+}
+
+// ───────── 진행 상태 계산 ─────────
+const EMPTY = { status: "unlearned", streak: 0, correct: 0, wrong: 0, selfRating: null, lastAt: 0 };
+const prog = (c) => c.progress || EMPTY;
+function applyVerdict(p, v) {
+  const now = Date.now();
+  if (v === "correct") {
+    const streak = p.streak + 1;
+    const need = p.wrong > 0 ? 2 : 1; // 틀린 적 있으면 연속 2번
+    return { ...p, streak, correct: p.correct + 1, status: streak >= need ? "mastered" : "review", lastAt: now };
+  }
+  if (v === "partial") return { ...p, streak: 0, status: "review", lastAt: now };
+  return { ...p, streak: 0, wrong: p.wrong + 1, status: "review", lastAt: now };
+}
+function applySelf(p, r) {
+  const next = { ...p, selfRating: r, lastAt: Date.now() };
+  if (r !== "know" && p.status !== "review") next.status = "review";
+  return next;
+}
+function priority(p) {
+  let s = p.wrong * 3 - p.streak * 2;
+  if (p.selfRating === "dontknow") s += 3;
+  if (p.selfRating === "unsure") s += 2;
+  if (p.status === "review") s += 4;
+  if (p.status === "unlearned") s += 1;
+  if (p.status === "mastered") s -= 10;
+  return s;
+}
+const isWeak = (p) => p.status === "review" || (p.status !== "mastered" && (p.selfRating === "unsure" || p.selfRating === "dontknow"));
+const weakConcepts = () => S.concepts.filter((c) => isWeak(prog(c))).sort((a, b) => priority(prog(b)) - priority(prog(a)));
+function stats() {
+  const ess = S.concepts.filter((c) => c.tier === "essential");
+  const essential = { mastered: 0, review: 0, unlearned: 0 };
+  for (const c of ess) essential[prog(c).status]++;
+  const by = {};
+  for (const a of S.attempts) {
+    const t = (by[a.question.type] ||= { total: 0, score: 0 });
+    t.total++; t.score += a.verdict === "correct" ? 1 : a.verdict === "partial" ? 0.5 : 0;
+  }
+  return {
+    essentialTotal: ess.length, essential,
+    percent: ess.length ? Math.round((essential.mastered / ess.length) * 100) : 0,
+    byType: QTYPES.filter((t) => by[t]).map((t) => ({ type: t, total: by[t].total, rate: Math.round((by[t].score / by[t].total) * 100) })),
+  };
+}
+async function saveProgress(c, p) {
+  c.progress = p;
+  render();
+  try { await patch(`${P.concepts(S.meta.id)}/${c.id}`, { progress: p }); await touchMeta(); }
+  catch (e) { S.error = dbErrorText(e); render(); }
+}
+
+// ───────── 파일 읽기 (브라우저에서) ─────────
+async function parsePdf(buf) {
+  if (!window.pdfjsLib) throw new Error("PDF 라이브러리를 불러오지 못했습니다.");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf), isEvalSupported: false }).promise;
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const tc = await (await pdf.getPage(i)).getTextContent();
+    let t = "";
+    for (const it of tc.items) { t += it.str || ""; if (it.hasEOL) t += "\n"; }
+    pages.push({ label: `p.${i}`, text: clean(t) });
+  }
+  return pages;
+}
+const decodeXml = (s) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&amp;/g, "&");
+async function parsePptx(buf) {
+  if (!window.JSZip) throw new Error("PPTX 라이브러리를 불러오지 못했습니다.");
+  const zip = await JSZip.loadAsync(buf);
+  const slides = Object.keys(zip.files).map((n) => [n, n.match(/^ppt\/slides\/slide(\d+)\.xml$/)]).filter((x) => x[1]).map((x) => ({ name: x[0], n: +x[1][1] })).sort((a, b) => a.n - b.n);
+  const pages = [];
+  for (const s of slides) {
+    const xml = await zip.file(s.name).async("string");
+    const paras = xml.split(/<\/a:p>/).map((p) => [...p.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => decodeXml(m[1])).join(""));
+    pages.push({ label: `슬라이드 ${s.n}`, text: clean(paras.filter(Boolean).join("\n")) });
+  }
+  return pages;
+}
+function parseTxt(buf) {
+  const text = new TextDecoder("utf-8").decode(buf);
+  const pages = []; let cur = "";
+  for (const p of text.split(/\n\s*\n/)) {
+    if (cur.length + p.length > 3000 && cur) { pages.push({ label: `구간 ${pages.length + 1}`, text: clean(cur) }); cur = ""; }
+    cur += p + "\n\n";
+  }
+  if (cur.trim()) pages.push({ label: `구간 ${pages.length + 1}`, text: clean(cur) });
+  return pages;
+}
+async function parseFile(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".ppt")) throw new Error("구버전 .ppt는 지원하지 않습니다. PowerPoint에서 .pptx 또는 PDF로 저장해 올려주세요.");
+  if (!/\.(pdf|pptx|txt|md)$/.test(name)) throw new Error("PDF, PPTX, TXT 파일만 지원합니다.");
+  if (file.size > 50 * 1024 * 1024) throw new Error("파일이 너무 큽니다(최대 50MB).");
+  const buf = await file.arrayBuffer();
+  let pages;
+  try {
+    pages = name.endsWith(".pdf") ? await parsePdf(buf) : name.endsWith(".pptx") ? await parsePptx(buf) : parseTxt(buf);
+  } catch (e) {
+    throw new Error(`파일을 읽지 못했습니다. 손상되었거나 암호가 걸려 있을 수 있습니다.`);
+  }
+  const empty = pages.filter((p) => p.text.length < MIN_TEXT).map((p) => p.label);
+  if (!pages.length || empty.length === pages.length)
+    throw new Error("텍스트를 찾지 못했습니다. 스캔본·이미지로만 된 자료는 텍스트 추출이 불가능합니다. 내용을 TXT로 붙여넣어 올려주세요.");
+  const warnings = [];
+  if (empty.length) warnings.push(`텍스트가 거의 없는 페이지(이미지 위주일 가능성): ${empty.slice(0, 15).join(", ")}${empty.length > 15 ? ` 외 ${empty.length - 15}개` : ""}. 이 부분의 그림·도표 내용은 학습에 반영되지 않습니다.`);
+  return { pages: pages.filter((p) => p.text.length >= MIN_TEXT), warnings };
+}
+function buildChunks(materials) {
+  const chunks = [];
+  for (const m of materials) {
+    let buf = [], size = 0, first = "", last = "";
+    const flush = () => { if (buf.length) { chunks.push({ text: buf.join("\n\n"), label: `${m.lecture} ${first}${first !== last ? `~${last}` : ""}` }); buf = []; size = 0; } };
+    for (const p of m.pages) {
+      const block = `[${m.lecture} | ${p.label}]\n${p.text}`.slice(0, CHUNK_CHARS);
+      if (size + block.length > CHUNK_CHARS && buf.length) flush();
+      if (!buf.length) first = p.label;
+      buf.push(block); size += block.length; last = p.label;
+    }
+    flush();
+  }
+  return chunks;
+}
+
+// ───────── AI 지시문 ─────────
+function describeSettings(s) {
+  const types = s.types.map((t) => `${QT[t]}${s.weights[t] ? ` ${s.weights[t]}%` : ""}`).join(", ");
+  const lines = [`- 출제 유형: ${types}`, `- 시험 난이도: ${DIFF[s.difficulty]}`, `- 학습 목표: ${GOAL[s.goal]}`];
+  if (s.emphasis.trim()) lines.push(`- 교수님 강조 내용: ${s.emphasis.trim()}`);
+  if (s.scope.trim()) lines.push(`- 예상 출제 범위: ${s.scope.trim()}`);
+  if (s.examDate) lines.push(`- 시험 날짜: ${s.examDate}`);
+  if (s.pastExam.trim()) lines.push(`- 기출/예상 문제:\n${s.pastExam.trim().slice(0, 8000)}`);
+  return lines.join("\n");
+}
+const ANALYZE_RULES = `당신은 대학생의 시험공부를 돕는 학습 설계 도우미입니다.
+원칙: "많이 공부하는 것이 아니라, 시험에 필요한 만큼 정확하게 공부한다."
+
+반드시 지킬 것
+- 오직 아래 강의 자료에 근거해서만 개념을 만든다. 자료에 없는 외부 지식·예시·수치를 추가하지 않는다.
+- 각 개념의 출처(sourceLecture: 강의 이름, sourceLocation: "p.3" 또는 "슬라이드 5" 같은 위치)를 자료의 [강의 | 위치] 표시에서 그대로 가져온다. 여러 곳이면 "p.3-5"처럼 쓴다.
+- 출제 여부를 단정하지 않는다("반드시 나온다", "안 나온다" 금지). 우선순위로만 표현한다.
+- 모든 설명은 쉬운 한국어로, 짧게.
+
+출제 유형별 학습 깊이
+- 객관식: 핵심 정의와 비슷한 개념 간 차이(confusions)에 집중. 정답을 고를 수 있는 수준까지만.
+- OX: 참/거짓을 가르는 핵심 조건·예외를 명확히.
+- 단답형/빈칸: 핵심 용어·키워드 중심, 정의는 짧게.
+- 약술형: briefAnswer를 2~3문장 모범답안으로, 꼭 들어갈 키워드는 keywords에.
+- 서술형: essayOutline에 논리적 답안 구조 3~5단계를, 근거와 예시는 자료에서.
+선택하지 않은 유형의 필드는 빈 문자열/빈 배열로 둔다(cloze와 flashcards는 항상 작성).
+
+학습량 조절
+- "최소 암기": 꼭 필요한 핵심만 essential, optional은 아주 적게.
+- "일반 학습": 주요 개념을 충분히, 세부는 optional.
+- "고득점 대비": 예외·세부 개념까지 포함(대부분 optional).
+- 난이도가 쉬우면 세부를 줄이고, 어려우면 조건·예외·비교를 늘린다. 출제 유형만으로 난이도를 판단하지 않는다.
+- 교수님 강조·예상 범위와 관련된 개념은 essential로 올리고 emphasized=true.
+- 기출문제가 있으면 출제 경향(형태, 깊이)을 참고한다.
+
+tier: essential(필수 암기, 이것만 끝내도 최소 목표 달성) / optional(선택 학습)
+
+출력: 아래 형태의 JSON 객체 하나만.
+{"strategy":{"overview":"2~3문장 공부 전략","focus":["우선 공부할 포인트 3~6개"],"methods":["추천 학습 방법 2~4개"]},
+ "concepts":[{"title":"개념 이름","tier":"essential","summary":"쉬운 말 요약 1~3문장","definition":"시험용 한 줄 정의","keywords":["키워드 2~5개"],
+   "flashcards":[{"front":"질문","back":"정답+짧은 설명"}],"cloze":"핵심 키워드를 [[키워드]]로 감싼 한두 문장","briefAnswer":"","essayOutline":[],
+   "confusions":[{"other":"헷갈리는 다른 개념","difference":"차이"}],"sourceLecture":"강의 이름","sourceLocation":"p.3","emphasized":false}],
+ "warnings":["자료 자체의 한계(표·그림 누락 추정 등). 없으면 빈 배열"]}`;
+
+function analyzePrompt(s, material, titles, part) {
+  return `${ANALYZE_RULES}
+
+[시험 정보]
+${describeSettings(s)}
+
+[처리 구간] ${part}
+${titles.length ? `[이미 추출된 개념 — 중복 생성 금지]\n${titles.join(", ")}\n` : ""}
+[강의 자료]
+${material}`;
+}
+function quizPrompt(s, concepts, counts, avoid) {
+  const list = concepts.map((c) => ({ id: c.id, title: c.title, tier: c.tier, definition: c.definition, summary: c.summary, keywords: c.keywords, briefAnswer: c.briefAnswer, essayOutline: c.essayOutline, confusions: c.confusions }));
+  const countText = Object.entries(counts).filter(([, n]) => n).map(([t, n]) => `${t}(${QT[t]}) ${n}문제`).join(", ");
+  return `당신은 대학 시험 출제자입니다. 아래 개념 목록(강의 자료에서 추출)만 근거로 실전형 문제를 만드세요.
+- 자료에 없는 외부 지식으로 문제를 만들지 않는다. conceptId에는 주어진 개념 id를 그대로 넣는다.
+- mcq(객관식): choices 4~5개, answer는 정답 보기 텍스트와 정확히 동일. 오답 보기는 헷갈리는 개념을 활용.
+- ox: choices ["O","X"], answer "O" 또는 "X".
+- short(단답형): answer는 핵심 용어 하나(동의어가 있으면 "용어A / 용어B"), choices [].
+- fill(빈칸 채우기): question에 빈칸을 "_____"로 표시, answer는 빈칸 단어, choices [].
+- brief(약술형): 2~3문장으로 답할 질문. modelAnswer에 간결한 모범답안, requiredKeywords 2~4개. answer는 modelAnswer와 같게.
+- essay(서술형): 논리적 서술 질문. modelAnswer에 단계별 모범답안, requiredKeywords 3~6개. answer는 modelAnswer와 같게.
+- explanation: 짧은 해설. keyPoint: 기억할 핵심 한 줄.
+- 난이도 반영(쉬움: 정의 확인, 어려움: 비교·조건·예외·적용). 이전에 낸 문제와 다른 각도로 출제.
+
+[시험 정보]
+${describeSettings(s)}
+
+[만들 문제] ${countText} — 정확히 이 개수와 유형으로.
+${avoid.length ? `\n[이전에 낸 문제 — 반복 금지]\n${avoid.slice(-40).map((q) => `- ${q}`).join("\n")}\n` : ""}
+[개념 목록(JSON)]
+${JSON.stringify(list)}
+
+출력: JSON 객체 하나만.
+{"questions":[{"type":"mcq","conceptId":"개념 id","question":"","choices":[],"answer":"","explanation":"","keyPoint":"","requiredKeywords":[],"modelAnswer":""}]}`;
+}
+function gradePrompt(q, answer) {
+  return `당신은 대학 시험 채점자입니다. 학생 답안을 모범답안·필수 키워드와 비교해 채점하세요.
+- 표현이 같은지가 아니라 핵심 개념과 필수 키워드(또는 같은 뜻의 표현)가 들어 있는지를 기준으로 판단.
+- verdict: correct(핵심 모두 포함) / partial(일부 포함) / wrong(핵심 누락·오개념).
+- 단답형/빈칸은 동의어·영문 표기·사소한 오타는 정답으로 인정.
+- feedback: 2~3문장, 잘한 점과 부족한 점을 쉬운 말로. missing: 빠졌거나 틀린 핵심 목록(없으면 []).
+
+[유형] ${QT[q.type]}
+[문제] ${q.question}
+[모범답안] ${q.modelAnswer || q.answer}
+[필수 키워드] ${q.requiredKeywords.join(", ") || "(없음)"}
+[학생 답안] ${answer}
+
+출력: JSON 객체 하나만. {"verdict":"correct","feedback":"","missing":[]}`;
+}
+
+// AI 응답 검증·정리
+function cleanConcept(c) {
+  return {
+    title: str(c.title).trim(), tier: c.tier === "essential" ? "essential" : "optional",
+    summary: str(c.summary), definition: str(c.definition), keywords: strs(c.keywords),
+    flashcards: arr(c.flashcards).map((f) => ({ front: str(f && f.front), back: str(f && f.back) })).filter((f) => f.front && f.back),
+    cloze: str(c.cloze), briefAnswer: str(c.briefAnswer), essayOutline: strs(c.essayOutline),
+    confusions: arr(c.confusions).map((x) => ({ other: str(x && x.other), difference: str(x && x.difference) })).filter((x) => x.other),
+    source: { lecture: str(c.sourceLecture), location: str(c.sourceLocation) }, emphasized: c.emphasized === true,
+  };
+}
+function cleanQuestions(raw, ids, types) {
+  return arr(raw && raw.questions).map((q) => ({
+    id: uid(), type: QTYPES.includes(q && q.type) ? q.type : "", conceptId: str(q && q.conceptId), question: str(q && q.question),
+    choices: strs(q && q.choices), answer: str(q && q.answer), explanation: str(q && q.explanation), keyPoint: str(q && q.keyPoint),
+    requiredKeywords: strs(q && q.requiredKeywords), modelAnswer: str(q && q.modelAnswer),
+  })).filter((q) => {
+    if (!q.type || !types.includes(q.type) || !ids.has(q.conceptId) || !q.question) return false;
+    if (q.type === "ox") q.choices = ["O", "X"];
+    if (q.type === "mcq" || q.type === "ox") return q.choices.includes(q.answer);
+    return Boolean(q.answer || q.modelAnswer);
+  });
+}
+function splitCounts(types, weights, total) {
+  const w = types.map((t) => weights[t] || 0), sum = w.reduce((a, b) => a + b, 0);
+  const raw = (sum ? w.map((x) => x / sum) : types.map(() => 1 / types.length)).map((r) => r * total);
+  const counts = raw.map(Math.floor);
+  let left = total - counts.reduce((a, b) => a + b, 0);
+  raw.map((r, i) => [r - Math.floor(r), i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { counts[i]++; left--; } });
+  return Object.fromEntries(types.map((t, i) => [t, counts[i]]));
+}
+
+// ───────── 화면 ─────────
+function badge(text, tone = "") { return `<span class="badge ${tone}">${esc(text)}</span>`; }
+function meter(pct) { return `<div class="meter" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.max(0, Math.min(100, pct))}%"></i></div>`; }
+function dday(date) {
+  if (!date) return "";
+  const d = Math.ceil((new Date(date + "T23:59:59").getTime() - Date.now()) / 86400000) - 1;
+  return d >= 0 ? `D-${d === 0 ? "DAY" : d}` : "";
+}
+const src = (c) => [c.source && c.source.lecture, c.source && c.source.location].filter(Boolean).join(" · ");
+const errBox = () => (S.error ? `<div class="notice err" role="alert">${esc(S.error)}</div>` : "");
+
+function render() {
+  const app = $("#app");
+  $("#bar-new").hidden = S.view === "new" || !DB;
+  if (!S.ready) { app.innerHTML = `<p class="muted"><span class="spin"></span>준비하는 중…</p>`; return; }
+  if (S.unavailable) { app.innerHTML = `<div class="card"><h2>이 화면에서는 사용할 수 없습니다</h2><p class="muted">${esc(S.unavailable)}</p></div>`; return; }
+  const v = { home: viewHome, new: viewNew, set: viewSet, review: viewReview }[S.view] || viewHome;
+  app.innerHTML = v();
+}
+
+function viewHome() {
+  if (S.sets === null) return `<p class="muted"><span class="spin"></span>학습 목록을 불러오는 중…</p>`;
+  const total = S.sets.reduce((a, s) => a + ((s.stat && s.stat.essential) || 0), 0);
+  const done = S.sets.reduce((a, s) => a + ((s.stat && s.stat.mastered) || 0), 0);
+  const cards = S.sets.map((s) => {
+    const pct = s.stat && s.stat.essential ? Math.round((s.stat.mastered / s.stat.essential) * 100) : 0;
+    const analyzing = s.chunksDone < s.chunksTotal;
+    const confirming = S.confirmDelete === s.id;
+    return `<div class="card">
+      <div class="between"><h3>${esc(s.name)}</h3>${dday(s.settings.examDate) ? `<span class="dday">${dday(s.settings.examDate)}</span>` : ""}</div>
+      <div class="row">${s.settings.types.map((t) => badge(QT[t])).join("")}${badge(GOAL[s.settings.goal], "acc")}</div>
+      <p class="tiny muted">자료 ${s.materials.length}개${analyzing ? " · 분석 미완료" : ""}</p>
+      <div><div class="between tiny muted"><span>필수 개념 암기</span><span class="mono">${pct}%</span></div>${meter(pct)}</div>
+      ${confirming
+        ? `<div class="notice err small">이 학습 세트와 학습 기록을 모두 삭제할까요?<div class="row" style="margin-top:8px"><button class="btn" data-act="delete-yes" data-id="${s.id}">삭제</button><button class="btn sec" data-act="delete-no">취소</button></div></div>`
+        : `<div class="row"><button class="btn" style="flex:1" data-act="open" data-id="${s.id}">${analyzing ? "분석 계속" : "학습하기"}</button><button class="btn sec" data-act="open-review" data-id="${s.id}">복습</button><button class="btn ghost" data-act="delete" data-id="${s.id}">삭제</button></div>`}
+    </div>`;
+  }).join("");
+  return `${errBox()}
+    <div class="between"><div><h1>내 학습</h1><p class="small muted">많이 공부하는 것이 아니라, 시험에 필요한 만큼 정확하게.</p></div><button class="btn" data-act="new">+ 새 자료 추가</button></div>
+    ${total ? `<div class="card"><div class="between small"><b>전체 필수 개념 암기</b><span class="mono muted">${done} / ${total}</span></div>${meter((done / total) * 100)}</div>` : ""}
+    ${S.sets.length ? `<div class="sets">${cards}</div>` : `<div class="card" style="text-align:center;padding:36px 16px"><h2>아직 학습 자료가 없습니다</h2><p class="small muted">강의 자료(PDF·PPTX·TXT)를 올리고 시험 유형과 목표를 고르면, AI가 필요한 만큼만 공부하도록 정리해줍니다.</p><div><button class="btn" data-act="new">시작하기</button></div></div>`}
+    <p class="tiny muted">학습 기록은 내 claude.ai 계정의 이 페이지 전용 저장소에 저장되어 다른 기기에서도 이어집니다. AI 분석·문제 생성·채점은 내 Claude 사용량을 사용합니다.</p>`;
+}
+
+function newDraft() {
+  return { name: "", uploads: [], types: [], weights: {}, difficulty: "normal", goal: null, extraOpen: false, emphasis: "", scope: "", examDate: "", pastExam: "" };
+}
+function draftCheck(d) {
+  const done = d.uploads.filter((u) => u.state === "done");
+  const parsing = d.uploads.some((u) => u.state === "parsing");
+  const sum = d.types.reduce((a, t) => a + (d.weights[t] || 0), 0);
+  const weightOk = sum === 0 || sum === 100;
+  const chunks = buildChunks(done.map((u) => ({ lecture: u.lecture || u.fileName, pages: u.pages })));
+  const chars = done.reduce((a, u) => a + u.pages.reduce((b, p) => b + p.text.length, 0), 0);
+  let hint = "";
+  if (!done.length) hint = parsing ? "파일을 읽는 중입니다." : "강의 자료를 올려주세요.";
+  else if (!d.types.length) hint = "출제 유형을 하나 이상 선택해주세요.";
+  else if (!d.goal) hint = "학습 목표를 선택해주세요.";
+  else if (!weightOk) hint = `비중 합계가 ${sum}%입니다. 100%로 맞추거나 모두 비워두세요.`;
+  else hint = `추출된 텍스트 약 ${chars.toLocaleString()}자 · AI 분석 ${chunks.length}회 진행 예정`;
+  return { ok: done.length && !parsing && d.types.length && d.goal && weightOk, hint, sum, weightOk };
+}
+function viewNew() {
+  const d = S.draft, ck = draftCheck(d);
+  const files = d.uploads.map((u) => `<div class="file">
+      <div class="row"><span class="name">${esc(u.fileName)}</span>${u.state === "parsing" ? badge("읽는 중…") : u.state === "done" ? badge(`${u.pages.length}쪽 추출`, "good") : badge("실패", "bad")}<button class="btn ghost" data-act="rm-file" data-key="${u.key}" aria-label="${esc(u.fileName)} 제거">제거</button></div>
+      ${u.state === "done" ? `<label class="row small muted">강의 이름 <input class="field" style="flex:1;min-width:140px" id="lec-${u.key}" data-lec="${u.key}" value="${esc(u.lecture)}"></label>` : ""}
+      ${(u.warnings || []).map((w) => `<p class="tiny" style="color:var(--warn)">${esc(w)}</p>`).join("")}
+      ${u.error ? `<p class="tiny" style="color:var(--bad)">${esc(u.error)}</p>` : ""}
+    </div>`).join("");
+  return `<h1>시험 설정</h1>
+    <section class="card">
+      <h2>1. 강의 자료</h2>
+      <input class="field" id="d-name" data-draft="name" placeholder="학습 세트 이름 (예: 운영체제 중간고사). 비우면 첫 자료 이름" value="${esc(d.name)}">
+      <label class="drop" for="d-files">파일 선택 · PDF, PPTX, TXT (여러 개 가능)<input id="d-files" type="file" multiple accept=".pdf,.pptx,.txt,.md" hidden></label>
+      <p class="tiny muted">이미지로만 된 페이지, 복잡한 표·도표는 텍스트로 정확히 읽지 못할 수 있으며 그 부분은 학습에 반영되지 않습니다. 파일은 이 브라우저에서 읽고, 추출한 글자만 저장합니다.</p>
+      ${files}
+    </section>
+    <section class="card">
+      <h2>2. 시험 출제 유형 <span class="small muted">복수 선택</span></h2>
+      <div class="row">${QTYPES.map((t) => `<button class="chip" data-act="type" data-t="${t}" aria-pressed="${d.types.includes(t)}">${QT[t]}</button>`).join("")}</div>
+      ${d.types.length > 1 ? `<p class="tiny muted">유형별 비중(%) · 선택 사항. 입력하면 합계 100%여야 합니다.</p>
+        <div class="row">${QTYPES.filter((t) => d.types.includes(t)).map((t) => `<label class="row small">${QT[t]} <input class="field mono" style="width:72px" type="number" min="0" max="100" id="w-${t}" data-weight="${t}" value="${d.weights[t] || ""}">%</label>`).join("")}</div>
+        <p class="tiny" id="w-msg" style="color:var(--bad)">${ck.weightOk ? "" : `비중 합계 ${ck.sum}%`}</p>` : ""}
+    </section>
+    <section class="card">
+      <h2>3. 학습 목표</h2>
+      <div class="row">${Object.keys(GOAL).map((g) => `<button class="chip" style="flex:1;min-width:150px" data-act="goal" data-g="${g}" aria-pressed="${d.goal === g}"><b>${GOAL[g]}</b><br><span class="tiny muted">${GOAL_DESC[g]}</span></button>`).join("")}</div>
+      <h3 class="small">시험 난이도</h3>
+      <div class="row">${Object.keys(DIFF).map((k) => `<button class="chip" data-act="diff" data-k="${k}" aria-pressed="${d.difficulty === k}">${DIFF[k]}</button>`).join("")}</div>
+    </section>
+    <section class="card">
+      <button class="between" style="background:none;border:0;padding:0;cursor:pointer;text-align:left" data-act="extra"><h2>4. 추가 시험 정보</h2><span class="small muted">${d.extraOpen ? "접기" : "선택 사항 · 펼치기"}</span></button>
+      ${d.extraOpen ? `
+        <textarea class="field" rows="2" id="d-emph" data-draft="emphasis" placeholder="교수님이 강조한 내용 (예: 3강 스케줄링 알고리즘 비교)">${esc(d.emphasis)}</textarea>
+        <input class="field" id="d-scope" data-draft="scope" placeholder="예상 출제 범위 (예: 1~6강)" value="${esc(d.scope)}">
+        <label class="row small">시험 날짜 <input class="field" style="width:auto" type="date" id="d-date" data-draft="examDate" value="${esc(d.examDate)}"></label>
+        <textarea class="field" rows="4" id="d-past" data-draft="pastExam" placeholder="기출문제 또는 예상 문제 붙여넣기">${esc(d.pastExam)}</textarea>` : ""}
+    </section>
+    ${errBox()}
+    <div class="stack" style="align-items:flex-end;gap:6px">
+      <button class="btn" style="padding:12px 26px" data-act="start" id="start-btn" ${ck.ok && S.busy !== "create" ? "" : "disabled"}>${S.busy === "create" ? '<span class="spin"></span>저장 중…' : "학습 시작"}</button>
+      <p class="tiny muted" id="start-hint">${esc(ck.hint)}</p>
+    </div>`;
+}
+
+function defaultTab(s) {
+  const main = [...s.types].sort((a, b) => (s.weights[b] || 0) - (s.weights[a] || 0))[0];
+  return { mcq: "cards", ox: "cards", short: "cloze", fill: "cloze", brief: "summary", essay: "summary" }[main] || "summary";
+}
+function setHeader(link) {
+  const m = S.meta, s = m.settings;
+  return `<div class="between">
+    <div class="stack" style="gap:6px"><h1>${esc(m.name)}</h1>
+      <div class="row">${s.types.map((t) => badge(`${QT[t]}${s.weights[t] ? ` ${s.weights[t]}%` : ""}`)).join("")}${badge(GOAL[s.goal], "acc")}${badge(`난이도 ${DIFF[s.difficulty]}`)}${dday(s.examDate) ? `<span class="dday">${dday(s.examDate)}</span>` : ""}</div></div>
+    ${link}</div>`;
+}
+function dashboard() {
+  const st = stats();
+  const items = [["필수 개념", st.essentialTotal, "var(--ink)"], ["암기 완료", st.essential.mastered, "var(--good)"], ["복습 필요", st.essential.review, "var(--warn)"], ["미암기", st.essential.unlearned, "var(--muted)"]];
+  return `<section class="card" aria-label="학습 진행률">
+    <div class="stats">${items.map(([l, n, c]) => `<div><b style="color:${c}">${n}</b><span class="tiny muted">${l}</span></div>`).join("")}</div>
+    <div><div class="between tiny muted"><span>필수 개념 진행률 · 테스트로 확인된 개념 기준</span><span class="mono">${st.percent}%</span></div>${meter(st.percent)}</div>
+    ${st.byType.length ? `<div class="row tiny muted"><span>유형별 정답률</span>${st.byType.map((t) => `<span>${QT[t.type]} <b class="mono" style="color:var(--ink)">${t.rate}%</b> (${t.total})</span>`).join("")}</div>` : ""}
+  </section>`;
+}
+function viewSet() {
+  if (S.meta === null) return `${errBox()}<p class="muted"><span class="spin"></span>불러오는 중…</p>`;
+  if (S.meta === false) return `<div class="card">학습 세트를 찾을 수 없습니다. <button class="btn sec" data-act="home">홈으로</button></div>`;
+  const m = S.meta;
+  const analyzing = m.chunksDone < m.chunksTotal;
+  const tab = S.tab || defaultTab(m.settings);
+  const list = S.onlyEss ? S.concepts.filter((c) => c.tier === "essential") : S.concepts;
+  const warnings = [...m.materials.flatMap((x) => (x.warnings || []).map((w) => `${x.lecture}: ${w}`)), ...(m.notes || [])];
+  const essCount = S.concepts.filter((c) => c.tier === "essential").length;
+  let body = "";
+  if (S.concepts.length) {
+    body = tab === "summary" ? viewSummary(list) : tab === "cards" ? viewCards(list) : tab === "cloze" ? viewCloze(list) : viewQuiz("essential");
+  }
+  return `${setHeader(`<button class="btn sec" data-act="to-review">복습 화면</button>`)}
+    ${errBox()}
+    ${analyzing ? viewAnalyze() : ""}
+    ${S.concepts.length ? dashboard() : ""}
+    ${m.strategy ? `<details class="card" ${S.concepts.length < 1 || !S.attempts.length ? "open" : ""}><summary><b>AI 맞춤 학습 전략</b></summary>
+      <div class="stack small" style="margin-top:10px">
+        <p>${esc(m.strategy.overview)}</p>
+        <div><p class="label">우선 공부할 포인트</p><ul>${m.strategy.focus.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>
+        <div><p class="label">추천 학습 방법</p><ul>${m.strategy.methods.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>
+        <p class="tiny muted">출제 여부를 확정하는 것이 아니라 우선순위 제안입니다. 필수 암기만 끝내도 최소 목표를 달성하도록 구성했습니다.</p>
+      </div></details>` : ""}
+    ${warnings.length ? `<details class="notice"><summary>자료 관련 안내 ${warnings.length}건</summary><ul class="small" style="margin-top:6px">${warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul></details>` : ""}
+    ${S.concepts.length ? `
+      <div class="tabs" role="tablist">${[["summary", "핵심 요약"], ["cards", "암기 카드"], ["cloze", "빈칸 암기"], ["quiz", "실전 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${tab === id}" data-act="tab" data-tab="${id}">${l}</button>`).join("")}</div>
+      ${tab !== "quiz" ? `<label class="row small muted"><input type="checkbox" id="only-ess" data-act="only-ess" ${S.onlyEss ? "checked" : ""}> 필수 개념만 보기 (${essCount}/${S.concepts.length})</label>` : ""}
+      ${body}` : ""}`;
+}
+function viewAnalyze() {
+  const m = S.meta, pct = Math.round((m.chunksDone / Math.max(1, m.chunksTotal)) * 100);
+  const running = S.busy === "analyze";
+  return `<section class="card">
+    <h2>AI 학습 전략 · 핵심 개념 만들기</h2>
+    <p class="small">올린 자료를 ${m.chunksTotal}개 구간으로 나눠 분석합니다. 자료에 있는 내용만으로 개념을 만들고, 시험 유형과 목표에 맞춰 필수 암기와 선택 학습으로 나눕니다.</p>
+    ${meter(pct)}
+    <p class="tiny muted"><span class="mono">${m.chunksDone} / ${m.chunksTotal}</span> 구간 완료 · 구간마다 1~2분 걸릴 수 있습니다. 만들어진 개념은 바로 저장되어, 중간에 멈춰도 이어서 할 수 있습니다.</p>
+    <button class="btn" data-act="analyze" ${running ? "disabled" : ""}>${running ? `<span class="spin"></span>분석 중 (${m.chunksDone + 1}/${m.chunksTotal})` : m.chunksDone ? "이어서 분석" : "AI 분석 시작"}</button>
+  </section>`;
+}
+function statusBadge(c) { const s = prog(c).status; return badge(STATUS[s], STATUS_TONE[s]); }
+function rateRow(c, act = "rate") {
+  const cur = prog(c).selfRating;
+  return `<div class="rate">${[["know", "알고 있음"], ["unsure", "헷갈림"], ["dontknow", "모름"]].map(([r, l]) => `<button class="r-${r}" data-act="${act}" data-id="${c.id}" data-r="${r}" aria-pressed="${act === "rate" && cur === r}">${l}</button>`).join("")}</div>`;
+}
+function conceptHead(c) {
+  return `<div class="between"><div class="row"><h3>${esc(c.title)}</h3>${badge(c.tier === "essential" ? "필수" : "선택", c.tier === "essential" ? "acc" : "")}${c.emphasized ? badge("강조", "warn") : ""}</div>${statusBadge(c)}</div>`;
+}
+function viewSummary(list) {
+  const s = S.meta.settings;
+  if (!list.length) return `<div class="card muted">표시할 개념이 없습니다.</div>`;
+  return list.map((c) => `<article class="card">
+    ${conceptHead(c)}
+    <p class="defn">${esc(c.definition)}</p>
+    <p>${esc(c.summary)}</p>
+    ${c.keywords.length ? `<div class="row">${c.keywords.map((k) => `<span class="kw small">${esc(k)}</span>`).join("")}</div>` : ""}
+    ${s.types.includes("brief") && c.briefAnswer ? `<div><p class="label">약술형 모범답안</p><p class="small">${esc(c.briefAnswer)}</p></div>` : ""}
+    ${s.types.includes("essay") && c.essayOutline.length ? `<div><p class="label">서술형 답안 구조</p><ol class="small">${c.essayOutline.map((o) => `<li>${esc(o)}</li>`).join("")}</ol></div>` : ""}
+    ${c.confusions.length ? `<div><p class="label">헷갈리기 쉬운 개념</p>${c.confusions.map((x) => `<p class="small"><b>vs ${esc(x.other)}</b> · ${esc(x.difference)}</p>`).join("")}</div>` : ""}
+    <p class="tiny muted">출처 ${esc(src(c))}</p>
+    ${rateRow(c)}
+  </article>`).join("");
+}
+function viewCards(list) {
+  if (!S.cards || S.cards.key !== (S.onlyEss ? "e" : "a")) {
+    const cards = [...list].sort((a, b) => priority(prog(b)) - priority(prog(a))).flatMap((c) => c.flashcards.map((f) => ({ ...f, cid: c.id })));
+    S.cards = { key: S.onlyEss ? "e" : "a", list: cards, i: 0, flipped: false };
+  }
+  const k = S.cards;
+  if (!k.list.length) return `<div class="card muted">카드가 없습니다.</div>`;
+  if (k.i >= k.list.length) return `<div class="card" style="text-align:center"><h2>카드 ${k.list.length}장을 모두 봤습니다</h2><p class="small muted">이제 실전 테스트로 기억하고 있는지 확인해보세요. 암기 완료는 테스트 결과로만 인정됩니다.</p><div class="row" style="justify-content:center"><button class="btn sec" data-act="cards-restart">처음부터</button><button class="btn" data-act="tab" data-tab="quiz">실전 테스트</button></div></div>`;
+  const card = k.list[k.i], c = S.concepts.find((x) => x.id === card.cid);
+  return `<div class="between tiny muted"><span class="mono">${k.i + 1} / ${k.list.length}</span><span>${esc(c.title)}</span></div>
+    <button class="flash" data-act="flip" aria-label="카드 뒤집기">
+      ${k.flipped ? `${badge("정답", "good")}<p class="a">${esc(card.back)}</p><p class="tiny muted">출처 ${esc(src(c))}</p>` : `${badge("질문", "acc")}<p class="q">${esc(card.front)}</p><p class="tiny muted">눌러서 정답 보기</p>`}
+    </button>
+    ${k.flipped ? rateRow(c, "card-rate") : `<div class="between"><button class="btn ghost" data-act="card-prev" ${k.i ? "" : "disabled"}>이전</button><button class="btn ghost" data-act="card-next">건너뛰기</button></div>`}`;
+}
+function clozeParts(text) { return str(text).split(/(\[\[[^\]]+\]\])/g).filter((p) => p !== "").map((p) => (p.startsWith("[[") ? { blank: p.slice(2, -2) } : { text: p })); }
+function viewCloze(list) {
+  const items = list.filter((c) => /\[\[[^\]]+\]\]/.test(c.cloze));
+  if (!items.length) return `<div class="card muted">빈칸 문장이 없습니다.</div>`;
+  return `<p class="tiny muted">빈칸에 들어갈 핵심 키워드를 쓰고 정답을 확인하세요. 틀리면 복습 목록에 들어갑니다. Enter로 확인할 수 있습니다.</p>` + items.map((c) => {
+    const st = S.clozeState[c.id];
+    let j = -1;
+    const html = clozeParts(c.cloze).map((p) => {
+      if (p.text !== undefined) return esc(p.text);
+      j++;
+      const val = st ? st.inputs[j] || "" : S.clozeDraft[`${c.id}-${j}`] || "";
+      const cls = st && st.checked ? (norm(val) === norm(p.blank) ? "ok" : "no") : "";
+      return `<input id="cz-${c.id}-${j}" data-cz="${c.id}" data-j="${j}" aria-label="빈칸 ${j + 1}" class="${cls}" value="${esc(val)}" ${st && st.checked ? "disabled" : ""}>${st && st.checked && cls === "no" ? `<span class="fix">${esc(p.blank)}</span>` : ""}`;
+    }).join("");
+    return `<article class="card">${conceptHead(c)}<p class="cloze">${html}</p>
+      <div class="between"><span class="tiny muted">출처 ${esc(src(c))}</span>${st && st.checked ? `<button class="btn sec" data-act="cz-reset" data-id="${c.id}">다시 풀기</button>` : `<button class="btn" data-act="cz-check" data-id="${c.id}">정답 확인</button>`}</div></article>`;
+  }).join("");
+}
+
+// ───────── 실전 테스트 ─────────
+const SCOPE = { essential: "필수 개념", all: "전체 개념", weak: "취약 개념만" };
+function newQuiz(scope) { return { scope, types: [...S.meta.settings.types], count: 5, questions: null, i: 0, answer: "", result: null, score: [] }; }
+function pickConcepts(scope) {
+  const pool = scope === "weak" ? weakConcepts() : S.concepts.filter((c) => scope === "all" || c.tier === "essential");
+  return pool.map((c) => ({ c, p: priority(prog(c)) + Math.random() })).sort((a, b) => b.p - a.p).slice(0, 12).map((x) => x.c);
+}
+function viewQuiz(defaultScope) {
+  if (!S.quiz) S.quiz = newQuiz(defaultScope);
+  const q = S.quiz, set = S.meta.settings;
+  if (!q.questions) {
+    return `<section class="card">
+      <div><p class="label">출제 범위</p><div class="row">${Object.keys(SCOPE).map((s) => `<button class="chip" data-act="q-scope" data-s="${s}" aria-pressed="${q.scope === s}">${SCOPE[s]}</button>`).join("")}</div></div>
+      <div><p class="label">출제 유형</p><div class="row">${set.types.map((t) => `<button class="chip" data-act="q-type" data-t="${t}" aria-pressed="${q.types.includes(t)}">${QT[t]}${set.weights[t] ? ` ${set.weights[t]}%` : ""}</button>`).join("")}</div></div>
+      <div><p class="label">문제 수</p><div class="row">${[5, 10, 15].map((n) => `<button class="chip mono" data-act="q-count" data-n="${n}" aria-pressed="${q.count === n}">${n}</button>`).join("")}</div></div>
+      <button class="btn wide" data-act="q-gen" ${S.busy === "quiz" ? "disabled" : ""}>${S.busy === "quiz" ? '<span class="spin"></span>AI가 문제를 만드는 중…' : "문제 만들기"}</button>
+      <p class="tiny muted">덜 외운 개념부터 출제되고, 이전에 푼 문제와 다른 형태로 만들어집니다.</p>
+    </section>`;
+  }
+  if (q.i >= q.questions.length) {
+    const c = q.score.filter((v) => v === "correct").length, p = q.score.filter((v) => v === "partial").length;
+    return `<section class="card" style="text-align:center">
+      <h2><span class="mono">${q.questions.length}</span>문제 중 <span class="mono">${c}</span>개 정답${p ? `, <span class="mono">${p}</span>개 부분 정답` : ""}</h2>
+      <p class="small muted">틀린 문제와 개념은 복습 화면에 모였습니다.</p>
+      <div class="row" style="justify-content:center"><button class="btn" data-act="q-gen" ${S.busy === "quiz" ? "disabled" : ""}>${S.busy === "quiz" ? '<span class="spin"></span>만드는 중…' : "새 문제 풀기"}</button><button class="btn sec" data-act="q-setup">설정 바꾸기</button></div>
+    </section>`;
+  }
+  const item = q.questions[q.i], r = q.result, c = S.concepts.find((x) => x.id === item.conceptId);
+  const choice = item.type === "mcq" || item.type === "ox", long = item.type === "brief" || item.type === "essay";
+  let input = "";
+  if (choice) {
+    input = `<div class="stack" style="gap:8px">${item.choices.map((ch, i) => {
+      const cls = r ? (ch === item.answer ? "right" : r.userAnswer === ch ? "wrong" : "") : "";
+      return `<button class="choice ${cls}" data-act="q-choice" data-i="${i}" ${r || S.busy === "grade" ? "disabled" : ""}>${item.type === "mcq" ? `<span class="n">${i + 1}</span>` : ""}<span>${esc(ch)}</span></button>`;
+    }).join("")}</div>`;
+  } else if (!r) {
+    input = `${long ? `<textarea class="field" rows="${item.type === "essay" ? 8 : 4}" id="q-ans" data-qans placeholder="${item.type === "essay" ? "논리적인 순서로 답안을 쓰세요." : "2~3문장으로 핵심만 쓰세요."}">${esc(q.answer)}</textarea>` : `<input class="field" id="q-ans" data-qans placeholder="정답 입력" value="${esc(q.answer)}">`}
+      <div class="row"><button class="btn" style="flex:1" data-act="q-submit" ${S.busy === "grade" ? "disabled" : ""}>${S.busy === "grade" ? '<span class="spin"></span>AI가 채점하는 중…' : "제출"}</button><button class="btn sec" data-act="q-skip" ${S.busy === "grade" ? "disabled" : ""}>모르겠음</button></div>`;
+  }
+  const res = r ? `<div class="stack" style="border-top:1px solid var(--line);padding-top:12px;gap:10px">
+      <div>${badge(VERDICT[r.verdict], r.verdict === "correct" ? "good" : r.verdict === "partial" ? "warn" : "bad")}</div>
+      ${!choice ? `<p class="small"><span class="muted">내 답 · </span>${esc(r.userAnswer)}</p>` : ""}
+      ${r.feedback ? `<p class="small">${esc(r.feedback)}</p>` : ""}
+      ${r.missing.length ? `<p class="small" style="color:var(--bad)"><b>부족한 내용 · </b>${esc(r.missing.join(", "))}</p>` : ""}
+      <div class="answerbox"><p class="label">${long ? "모범답안" : "정답"}</p><p style="white-space:pre-line">${esc(long ? item.modelAnswer || item.answer : item.answer)}</p>${item.requiredKeywords.length ? `<p class="tiny muted">필수 키워드 · ${esc(item.requiredKeywords.join(", "))}</p>` : ""}</div>
+      <p class="small"><span class="label">해설 </span>${esc(item.explanation)}</p>
+      <p class="point small"><b>암기 포인트</b> ${esc(item.keyPoint)}</p>
+      ${c ? `<p class="tiny muted">출처 ${esc(src(c))} · 개념 ${esc(c.title)}</p>` : ""}
+      <button class="btn wide" data-act="q-next">${q.i + 1 < q.questions.length ? "다음 문제" : "결과 보기"}</button>
+    </div>` : "";
+  return `<div class="between tiny muted"><span class="mono">${q.i + 1} / ${q.questions.length}</span>${badge(QT[item.type])}</div>
+    <section class="card"><p style="white-space:pre-line;font-weight:500">${esc(item.question)}</p>${input}${res}</section>`;
+}
+
+function viewReview() {
+  if (S.meta === null) return `${errBox()}<p class="muted"><span class="spin"></span>불러오는 중…</p>`;
+  if (S.meta === false) return `<div class="card">학습 세트를 찾을 수 없습니다.</div>`;
+  const weak = weakConcepts();
+  const latest = new Map();
+  for (const a of S.attempts) latest.set(a.question.question, a);
+  const wrong = [...latest.values()].filter((a) => a.verdict !== "correct").sort((a, b) => b.at - a.at);
+  const t = S.reviewTab;
+  let body = "";
+  if (t === "weak") {
+    body = weak.length ? `<p class="tiny muted">틀렸거나 헷갈린 개념만 우선순위 순으로 모았습니다. 반복해서 맞히면 목록에서 빠집니다.</p>` + weak.map((c) => {
+      const p = prog(c);
+      return `<article class="card">${conceptHead(c)}<p class="defn">${esc(c.definition)}</p><p class="small">${esc(c.summary)}</p>
+        ${c.keywords.length ? `<div class="row">${c.keywords.map((k) => `<span class="kw small">${esc(k)}</span>`).join("")}</div>` : ""}
+        ${c.confusions.map((x) => `<p class="small"><b>vs ${esc(x.other)}</b> · ${esc(x.difference)}</p>`).join("")}
+        <p class="tiny muted">출처 ${esc(src(c))} · 오답 <span class="mono">${p.wrong}</span>회 · 연속 정답 <span class="mono">${p.streak}</span>회</p></article>`;
+    }).join("") + `<button class="btn wide" data-act="rtab" data-t="test">취약 개념만 테스트하기</button>`
+      : `<div class="card muted" style="text-align:center">취약 개념이 없습니다. 실전 테스트로 기억을 확인해보세요.</div>`;
+  } else if (t === "wrong") {
+    body = wrong.length ? wrong.map((a) => {
+      const q = a.question, c = S.concepts.find((x) => x.id === q.conceptId), long = q.type === "brief" || q.type === "essay";
+      return `<article class="card small"><div class="between"><div class="row">${badge(QT[q.type])}${badge(VERDICT[a.verdict], a.verdict === "partial" ? "warn" : "bad")}</div><span class="tiny muted mono">${new Date(a.at).toLocaleDateString("ko-KR")}</span></div>
+        <p style="font-weight:500;white-space:pre-line">${esc(q.question)}</p>
+        <p><span class="muted">내 답 · </span>${esc(a.userAnswer)}</p>
+        <div class="answerbox"><span class="label">${long ? "모범답안" : "정답"} </span>${esc(long ? q.modelAnswer || q.answer : q.answer)}</div>
+        ${a.missing.length ? `<p style="color:var(--bad)">부족한 내용 · ${esc(a.missing.join(", "))}</p>` : ""}
+        <p>${esc(q.explanation)}</p><p class="point">${esc(q.keyPoint)}</p>
+        ${c ? `<p class="tiny muted">출처 ${esc(src(c))}</p>` : ""}</article>`;
+    }).join("") : `<div class="card muted" style="text-align:center">아직 틀린 문제가 없습니다.</div>`;
+  } else {
+    body = viewQuiz("weak");
+  }
+  return `${setHeader(`<button class="btn sec" data-act="to-set">학습 화면</button>`)}
+    ${errBox()}${dashboard()}
+    <div class="tabs" role="tablist">${[["weak", `취약 개념 ${weak.length}`], ["wrong", `오답 목록 ${wrong.length}`], ["test", "취약 개념 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${t === id}" data-act="rtab" data-t="${id}">${l}</button>`).join("")}</div>
+    ${body}`;
+}
+
+// ───────── 동작 ─────────
+async function createSet() {
+  const d = S.draft;
+  const materials = d.uploads.filter((u) => u.state === "done").map((u) => ({ lecture: (u.lecture || "").trim() || u.fileName, fileName: u.fileName, pages: u.pages, warnings: u.warnings || [] }));
+  const chunks = buildChunks(materials);
+  const id = uid(), now = Date.now();
+  const meta = {
+    id, name: d.name.trim() || materials[0].lecture, createdAt: now, updatedAt: now,
+    settings: { types: QTYPES.filter((t) => d.types.includes(t)), weights: Object.fromEntries(d.types.map((t) => [t, d.weights[t] || 0])), difficulty: d.difficulty, goal: d.goal, emphasis: d.emphasis, scope: d.scope, examDate: d.examDate, pastExam: d.pastExam },
+    materials: materials.map((m) => ({ lecture: m.lecture, fileName: m.fileName, pageCount: m.pages.length, warnings: m.warnings })),
+    strategy: null, notes: [], chunksTotal: chunks.length, chunksDone: 0, conceptCount: 0, stat: { essential: 0, mastered: 0 },
+  };
+  S.busy = "create"; S.error = ""; render();
+  try {
+    for (let i = 0; i < chunks.length; i++) await put(`${P.chunks(id)}/c${i}`, { index: i, label: chunks[i].label, text: chunks[i].text });
+    await put(P.set(id), meta);
+    S.busy = ""; S.draft = null;
+    S.sets = null; loadSets();
+    openSet(id);
+  } catch (e) { S.busy = ""; S.error = dbErrorText(e); render(); }
+}
+
+async function analyze() {
+  if (!SAMPLE) { S.error = "이 화면에서는 Claude를 호출할 수 없습니다."; return render(); }
+  const m = S.meta;
+  S.busy = "analyze"; S.error = ""; render();
+  const titles = S.concepts.map((c) => c.title);
+  try {
+    for (let i = m.chunksDone; i < m.chunksTotal; i++) {
+      const chunk = (await retry(() => DB.doc(`${P.chunks(m.id)}/c${i}`).get())).data();
+      if (!chunk) throw { code: "missing_chunk" };
+      const raw = await SAMPLE.json(analyzePrompt(m.settings, chunk.text, titles, `${i + 1}/${m.chunksTotal} (${chunk.label})`), { modelTier: "default" });
+      const seen = new Set(titles.map(norm));
+      const fresh = [];
+      for (const rc of arr(raw && raw.concepts)) {
+        const c = cleanConcept(rc || {});
+        if (!c.title || !c.definition || seen.has(norm(c.title))) continue;
+        seen.add(norm(c.title)); titles.push(c.title);
+        fresh.push({ ...c, id: uid(), order: (m.conceptCount || 0) + fresh.length, progress: EMPTY });
+      }
+      for (const c of fresh) await put(`${P.concepts(m.id)}/${c.id}`, c);
+      S.concepts.push(...fresh);
+      if (!m.strategy && raw && raw.strategy) m.strategy = { overview: str(raw.strategy.overview), focus: strs(raw.strategy.focus), methods: strs(raw.strategy.methods) };
+      m.notes = [...new Set([...(m.notes || []), ...strs(raw && raw.warnings)])];
+      m.chunksDone = i + 1; m.conceptCount = (m.conceptCount || 0) + fresh.length;
+      const st = stats();
+      m.stat = { essential: st.essentialTotal, mastered: st.essential.mastered }; m.updatedAt = Date.now();
+      await patch(P.set(m.id), { strategy: m.strategy, notes: m.notes, chunksDone: m.chunksDone, conceptCount: m.conceptCount, stat: m.stat, updatedAt: m.updatedAt });
+      render();
+    }
+  } catch (e) {
+    S.error = e && e.code === "missing_chunk" ? "저장된 자료 구간을 찾지 못했습니다. 학습 세트를 다시 만들어주세요." : e && "message" in e && DB_CODES.has(e.code) ? dbErrorText(e) : sampleErrorText(e);
+  }
+  S.busy = ""; render();
+}
+const DB_CODES = new Set(["invalid_argument", "resource_exhausted", "quota_exceeded", "unavailable", "revoked"]);
+
+async function genQuiz() {
+  if (!SAMPLE) { S.error = "이 화면에서는 Claude를 호출할 수 없습니다."; return render(); }
+  const q = S.quiz, concepts = pickConcepts(q.scope);
+  if (!concepts.length) { S.error = q.scope === "weak" ? "취약 개념이 없습니다. 먼저 학습·테스트를 진행하세요." : "출제할 개념이 없습니다."; return render(); }
+  const ids = new Set(concepts.map((c) => c.id));
+  const avoid = S.attempts.filter((a) => ids.has(a.question.conceptId)).map((a) => a.question.question);
+  S.busy = "quiz"; S.error = ""; render();
+  try {
+    const raw = await SAMPLE.json(quizPrompt(S.meta.settings, concepts, splitCounts(q.types, S.meta.settings.weights, q.count), avoid), { modelTier: "default", cache: false });
+    const questions = cleanQuestions(raw, ids, q.types);
+    if (!questions.length) throw { code: "invalid_json" };
+    Object.assign(q, { questions, i: 0, answer: "", result: null, score: [] });
+  } catch (e) { S.error = sampleErrorText(e); }
+  S.busy = ""; render();
+}
+async function record(item, userAnswer, g) {
+  const q = S.quiz;
+  q.result = { ...g, userAnswer }; q.score.push(g.verdict);
+  const a = { id: uid(), at: Date.now(), question: item, userAnswer, verdict: g.verdict, feedback: g.feedback, missing: g.missing };
+  S.attempts.push(a);
+  const c = S.concepts.find((x) => x.id === item.conceptId);
+  render();
+  try {
+    await put(`${P.attempts(S.meta.id)}/${a.id}`, a);
+    if (c) await saveProgress(c, applyVerdict(prog(c), g.verdict));
+  } catch (e) { S.error = dbErrorText(e); render(); }
+}
+async function submit(userAnswer) {
+  const item = S.quiz.questions[S.quiz.i];
+  if (item.type === "mcq" || item.type === "ox") return record(item, userAnswer, { verdict: userAnswer === item.answer ? "correct" : "wrong", feedback: "", missing: [] });
+  if (!userAnswer.trim()) return record(item, "(모름)", { verdict: "wrong", feedback: "답을 쓰지 않았습니다.", missing: item.requiredKeywords });
+  if ((item.type === "short" || item.type === "fill") && item.answer.split("/").map(norm).includes(norm(userAnswer)))
+    return record(item, userAnswer, { verdict: "correct", feedback: "", missing: [] });
+  if (!SAMPLE) { S.error = "이 화면에서는 AI 채점을 할 수 없습니다."; return render(); }
+  S.busy = "grade"; S.error = ""; render();
+  try {
+    const g = await SAMPLE.json(gradePrompt(item, userAnswer), { modelTier: "default" });
+    const verdict = ["correct", "partial", "wrong"].includes(g && g.verdict) ? g.verdict : null;
+    if (!verdict) throw { code: "invalid_json" };
+    S.busy = "";
+    await record(item, userAnswer, { verdict, feedback: str(g.feedback), missing: strs(g.missing) });
+  } catch (e) { S.busy = ""; S.error = sampleErrorText(e); render(); }
+}
+async function deleteSet(id) {
+  S.confirmDelete = null; S.busy = "delete"; render();
+  try {
+    for (const p of [P.chunks(id), P.concepts(id), P.attempts(id)]) for (const d of await getAll(p)) await remove(`${p}/${d.id}`);
+    await remove(P.set(id));
+    S.sets = S.sets.filter((s) => s.id !== id);
+  } catch (e) { S.error = dbErrorText(e); }
+  S.busy = ""; render();
+}
+
+const ACTIONS = {
+  home: () => { S.view = "home"; S.error = ""; S.confirmDelete = null; render(); window.scrollTo(0, 0); },
+  new: () => { S.view = "new"; S.draft ||= newDraft(); S.error = ""; render(); window.scrollTo(0, 0); },
+  open: (el) => openSet(el.dataset.id, "set"),
+  "open-review": (el) => openSet(el.dataset.id, "review"),
+  delete: (el) => { S.confirmDelete = el.dataset.id; render(); },
+  "delete-no": () => { S.confirmDelete = null; render(); },
+  "delete-yes": (el) => deleteSet(el.dataset.id),
+  "rm-file": (el) => { S.draft.uploads = S.draft.uploads.filter((u) => u.key !== el.dataset.key); render(); },
+  type: (el) => { const d = S.draft, t = el.dataset.t; d.types = d.types.includes(t) ? d.types.filter((x) => x !== t) : [...d.types, t]; render(); },
+  goal: (el) => { S.draft.goal = el.dataset.g; render(); },
+  diff: (el) => { S.draft.difficulty = el.dataset.k; render(); },
+  extra: () => { S.draft.extraOpen = !S.draft.extraOpen; render(); },
+  start: () => createSet(),
+  analyze: () => analyze(),
+  tab: (el) => { S.tab = el.dataset.tab; S.error = ""; render(); },
+  "only-ess": (el) => { S.onlyEss = el.checked; render(); },
+  "to-review": () => { S.view = "review"; S.quiz = null; S.error = ""; render(); window.scrollTo(0, 0); },
+  "to-set": () => { S.view = "set"; S.quiz = null; S.error = ""; render(); window.scrollTo(0, 0); },
+  rtab: (el) => { S.reviewTab = el.dataset.t; S.quiz = null; S.error = ""; render(); },
+  rate: (el) => { const c = S.concepts.find((x) => x.id === el.dataset.id); saveProgress(c, applySelf(prog(c), el.dataset.r)); },
+  flip: () => { S.cards.flipped = !S.cards.flipped; render(); },
+  "card-rate": (el) => { const c = S.concepts.find((x) => x.id === el.dataset.id); S.cards.i++; S.cards.flipped = false; saveProgress(c, applySelf(prog(c), el.dataset.r)); },
+  "card-prev": () => { S.cards.i = Math.max(0, S.cards.i - 1); S.cards.flipped = false; render(); },
+  "card-next": () => { S.cards.i++; S.cards.flipped = false; render(); },
+  "cards-restart": () => { S.cards = null; render(); },
+  "cz-check": (el) => {
+    const c = S.concepts.find((x) => x.id === el.dataset.id), blanks = clozeParts(c.cloze).filter((p) => p.blank !== undefined);
+    const inputs = blanks.map((_, j) => ($(`#cz-${c.id}-${j}`) || {}).value || "");
+    S.clozeState[c.id] = { inputs, checked: true };
+    const allOk = blanks.every((b, j) => norm(inputs[j]) === norm(b.blank));
+    saveProgress(c, applySelf(prog(c), allOk ? "know" : "unsure"));
+  },
+  "cz-reset": (el) => { delete S.clozeState[el.dataset.id]; for (const k of Object.keys(S.clozeDraft)) if (k.startsWith(el.dataset.id + "-")) delete S.clozeDraft[k]; render(); },
+  "q-scope": (el) => { S.quiz.scope = el.dataset.s; render(); },
+  "q-type": (el) => { const q = S.quiz, t = el.dataset.t; q.types = q.types.includes(t) ? (q.types.length > 1 ? q.types.filter((x) => x !== t) : q.types) : [...q.types, t]; render(); },
+  "q-count": (el) => { S.quiz.count = +el.dataset.n; render(); },
+  "q-gen": () => genQuiz(),
+  "q-setup": () => { S.quiz.questions = null; render(); },
+  "q-choice": (el) => submit(S.quiz.questions[S.quiz.i].choices[+el.dataset.i]),
+  "q-submit": () => submit(S.quiz.answer),
+  "q-skip": () => submit(""),
+  "q-next": () => { Object.assign(S.quiz, { i: S.quiz.i + 1, result: null, answer: "" }); S.error = ""; render(); },
+};
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-act]");
+  if (!el || el.disabled) return;
+  const fn = ACTIONS[el.dataset.act];
+  if (fn && el.type !== "checkbox") fn(el);
+});
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.dataset.act === "only-ess") return ACTIONS["only-ess"](el);
+  if (el.id === "d-files") {
+    for (const file of Array.from(el.files || [])) {
+      const u = { key: uid(), fileName: file.name, lecture: file.name.replace(/\.[^.]+$/, ""), state: "parsing" };
+      S.draft.uploads.push(u);
+      parseFile(file).then((r) => Object.assign(u, { state: "done", pages: r.pages, warnings: r.warnings })).catch((err) => Object.assign(u, { state: "error", error: err.message })).finally(() => { if (S.view === "new") render(); });
+    }
+    el.value = "";
+    render();
+  }
+});
+document.addEventListener("input", (e) => {
+  const el = e.target, d = S.draft;
+  if (el.dataset.draft && d) d[el.dataset.draft] = el.value;
+  else if (el.dataset.lec && d) { const u = d.uploads.find((x) => x.key === el.dataset.lec); if (u) u.lecture = el.value; }
+  else if (el.dataset.weight && d) { d.weights[el.dataset.weight] = Math.max(0, Math.min(100, +el.value || 0)); }
+  else if ("qans" in el.dataset && S.quiz) { S.quiz.answer = el.value; return; }
+  else if (el.dataset.cz) { S.clozeDraft[`${el.dataset.cz}-${el.dataset.j}`] = el.value; return; }
+  else return;
+  if (S.view === "new") {
+    // 입력 중 포커스를 잃지 않도록 버튼·안내만 갱신
+    const ck = draftCheck(d);
+    $("#start-btn").disabled = !ck.ok;
+    $("#start-hint").textContent = ck.hint;
+    const w = $("#w-msg"); if (w) w.textContent = ck.weightOk ? "" : `비중 합계 ${ck.sum}%`;
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || e.isComposing) return;
+  const el = e.target;
+  if (el.id === "q-ans" && el.tagName === "INPUT" && S.busy !== "grade") { e.preventDefault(); ACTIONS["q-submit"](); }
+  if (el.dataset && el.dataset.cz) { e.preventDefault(); const b = document.querySelector(`[data-act="cz-check"][data-id="${el.dataset.cz}"]`); if (b) b.click(); }
+});
+
+// ───────── 시작 ─────────
+(async () => {
+  render();
+  const use = (n) => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
+  const [db, user, sample] = await Promise.all([use("db"), use("user"), use("sample")]);
+  S.ready = true;
+  const id = user ? await user.id().catch(() => null) : null;
+  if (!db || !id) {
+    S.unavailable = "학습 기록을 저장하려면 claude.ai에 로그인한 상태로 이 페이지를 열어야 합니다. 페이지를 claude.ai에서 다시 열어주세요.";
+    return render();
+  }
+  DB = db; SAMPLE = sample; BASE = `data/users/${id}`;
+  render();
+  loadSets();
+})();
+</script>
