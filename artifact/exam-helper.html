@@ -493,9 +493,83 @@ function sampleErrorText(e) {
   return map[code] || "AI 요청 중 일시적인 오류가 발생했습니다. 다시 시도하세요.";
 }
 function dbErrorText(e) {
-  if (e && e.code === "quota_exceeded") return "저장 공간이 가득 찼습니다. 사용하지 않는 학습 세트를 삭제하세요.";
-  if (e && e.code === "invalid_argument") return "저장하지 못했습니다(데이터가 너무 크거나 형식이 잘못됨).";
-  return "저장소와 통신하지 못했습니다. 잠시 후 다시 시도하세요.";
+  if (e && e.code === "quota_exceeded") return "브라우저 저장 공간이 부족합니다. 사용하지 않는 학습 세트를 삭제하세요.";
+  return "브라우저 저장소에 저장하지 못했습니다. 시크릿 창이거나 사이트 데이터 저장이 차단되어 있으면 저장이 안 될 수 있습니다.";
+}
+
+// ───────── 로컬 저장소 (이 브라우저의 IndexedDB) ─────────
+// 경로(path) → 문서(JSON) 형태의 단순한 키-값 저장소. 컬렉션 조회는 경로 접두어로 한다.
+function localStore() {
+  let dbp = null;
+  const fail = (err) => ({ code: err && err.name === "QuotaExceededError" ? "quota_exceeded" : "local_error", message: String(err) });
+  const open = () => (dbp ||= new Promise((res, rej) => {
+    let r;
+    try { r = indexedDB.open("exam-helper", 1); } catch (e) { return rej(fail(e)); }
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(fail(r.error));
+  }));
+  const run = async (mode, fn) => {
+    const db = await open();
+    return new Promise((res, rej) => {
+      let out;
+      try {
+        const t = db.transaction("kv", mode);
+        fn(t.objectStore("kv"), (v) => { out = v; });
+        t.oncomplete = () => res(out);
+        t.onerror = t.onabort = () => rej(fail(t.error));
+      } catch (e) { rej(fail(e)); }
+    });
+  };
+  const snap = (id, d) => ({ id, exists: d !== undefined, data: () => d });
+  const json = (d) => JSON.parse(JSON.stringify(d));
+  const doc = (path) => ({
+    get: async () => snap(path.split("/").pop(), await run("readonly", (st, set) => { const r = st.get(path); r.onsuccess = () => set(r.result); })),
+    set: (d) => run("readwrite", (st) => st.put(json(d), path)),
+    update: (d) => run("readwrite", (st) => { const r = st.get(path); r.onsuccess = () => st.put({ ...(r.result || {}), ...json(d) }, path); }),
+    delete: () => run("readwrite", (st) => st.delete(path)),
+  });
+  const collection = (path) => {
+    const q = {
+      limit: () => q,
+      get: async () => {
+        const docs = await run("readonly", (st, set) => {
+          const found = [];
+          const c = st.openCursor(IDBKeyRange.bound(path + "/", path + "/\uffff"));
+          c.onsuccess = () => {
+            const cur = c.result;
+            if (!cur) return set(found);
+            const rest = String(cur.key).slice(path.length + 1);
+            if (!rest.includes("/")) found.push(snap(rest, cur.value));
+            cur.continue();
+          };
+        });
+        return { docs, size: docs.length, empty: !docs.length };
+      },
+    };
+    return q;
+  };
+  return { doc, collection, ready: open };
+}
+// IndexedDB를 쓸 수 없을 때: 이번 방문 동안만 메모리에 보관
+function memoryStore() {
+  const m = new Map();
+  const snap = (id, d) => ({ id, exists: d !== undefined, data: () => d && JSON.parse(JSON.stringify(d)) });
+  return {
+    doc: (path) => ({
+      get: async () => snap(path.split("/").pop(), m.get(path)),
+      set: async (d) => { m.set(path, JSON.parse(JSON.stringify(d))); },
+      update: async (d) => { m.set(path, { ...(m.get(path) || {}), ...JSON.parse(JSON.stringify(d)) }); },
+      delete: async () => { m.delete(path); },
+    }),
+    collection: (path) => {
+      const q = { limit: () => q, get: async () => {
+        const docs = [...m.keys()].filter((k) => k.startsWith(path + "/") && !k.slice(path.length + 1).includes("/")).map((k) => snap(k.slice(path.length + 1), m.get(k)));
+        return { docs, size: docs.length, empty: !docs.length };
+      } };
+      return q;
+    },
+  };
 }
 
 // ───────── 저장소 (내 계정 전용 경로) ─────────
@@ -847,7 +921,7 @@ function viewHome() {
     })()}
     ${total ? `<div class="card"><div class="between small"><b>전체 필수 개념 암기</b><span class="mono muted">${done} / ${total}</span></div>${meter((done / total) * 100)}</div>` : ""}
     ${S.sets.length ? `<div class="sets">${cards}</div>` : `<div class="card" style="text-align:center;padding:36px 16px"><h2>아직 학습 자료가 없습니다</h2><p class="small muted">강의 자료(PDF·PPTX·TXT)를 올리고 시험 유형과 목표를 고르면, AI가 필요한 만큼만 공부하도록 정리해줍니다.</p><div><button class="btn" data-act="new">시작하기</button></div></div>`}
-    <p class="tiny muted">학습 기록은 내 claude.ai 계정의 이 페이지 전용 저장소에 저장되어 다른 기기에서도 이어집니다. AI 분석·문제 생성·채점은 내 Claude 사용량을 사용합니다.</p>`;
+    <p class="tiny muted">${S.memoryOnly ? "이 브라우저에서는 저장소를 쓸 수 없어 기록이 이번 방문 동안만 유지됩니다. 새로고침하면 사라집니다." : "학습 기록은 이 브라우저에 저장됩니다. 다른 기기·브라우저와는 공유되지 않고, 브라우저 데이터를 지우면 함께 삭제됩니다."} ${SAMPLE ? "AI 분석·문제 생성·채점은 내 Claude 사용량을 사용합니다." : "이 화면에서는 AI 기능을 쓸 수 없어, 문제은행 세트만 이용할 수 있습니다."}</p>`;
 }
 
 function newDraft() {
@@ -1202,7 +1276,7 @@ async function analyze() {
   }
   S.busy = ""; render();
 }
-const DB_CODES = new Set(["invalid_argument", "resource_exhausted", "quota_exceeded", "unavailable", "revoked"]);
+const DB_CODES = new Set(["local_error", "quota_exceeded"]);
 
 function bankQuiz(q) {
   const concepts = pickConcepts(q.scope, Infinity);
@@ -1376,15 +1450,11 @@ document.addEventListener("keydown", (e) => {
 (async () => {
   render();
   const use = (n) => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
-  const [db, user, sample] = await Promise.all([use("db"), use("user"), use("sample")]);
+  DB = localStore(); BASE = "local";
+  try { await DB.ready(); } catch (e) { DB = memoryStore(); S.memoryOnly = true; }
   S.ready = true;
-  const id = user ? await user.id().catch(() => null) : null;
-  if (!db || !id) {
-    S.unavailable = "학습 기록을 저장하려면 claude.ai에 로그인한 상태로 이 페이지를 열어야 합니다. 페이지를 claude.ai에서 다시 열어주세요.";
-    return render();
-  }
-  DB = db; SAMPLE = sample; BASE = `data/users/${id}`;
   render();
   loadSets();
+  use("sample").then((sm) => { SAMPLE = sm; render(); });
 })();
 </script>
