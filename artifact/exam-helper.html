@@ -176,7 +176,7 @@ try { PRESET = JSON.parse(document.getElementById("course-preset").textContent);
 // fills: [빈칸 문장, 정답("A / B" = 허용 답)]   ox: [문장, "O"|"X", 해설]
 const KS_PRESET = {
   id: "ks-mid-2026-2",
-  version: 2,
+  version: 3,
   name: "한국학 산책 중간고사",
   source: "2026-2 <한국학 산책> 중간고사 준비자료",
   note: "40문항 중 20문항 출제 · 빈칸 넣기(주관식)와 OX · 빨간 표시는 교수님이 짚어준 내용 (긴 문장 = OX, 키워드 = 빈칸)",
@@ -995,7 +995,8 @@ async function upgradeBankSet(bk) {
   const types = ["multi", ...S.meta.settings.types.filter((t) => t !== "multi")];
   S.meta.settings = { ...S.meta.settings, types };
   S.meta.presetVersion = bk.preset.version;
-  await patch(P.set(S.meta.id), { settings: S.meta.settings, presetVersion: bk.preset.version });
+  S.meta.strategy = bk.preset.strategy;
+  await patch(P.set(S.meta.id), { settings: S.meta.settings, strategy: bk.preset.strategy, presetVersion: bk.preset.version });
   S.concepts = fresh;
 }
 
