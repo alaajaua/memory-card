@@ -120,6 +120,9 @@ textarea.field { resize: vertical; }
 .rate .r-dontknow[aria-pressed="true"] { border-color: var(--bad); }
 
 .cloze { line-height: 2.4; }
+.glist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+.glist li { padding: 9px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.glist li:first-child { border-top: 0; }
 .flash mark { padding: 0 4px; }
 .flash .blank { color: var(--accent); letter-spacing: 1px; }
 .tbar { height: 3px; background: var(--accent); border-radius: 2px; animation: tb linear forwards; }
@@ -783,6 +786,147 @@ const HR_PRESET = {
   ],
 };
 
+// 한국학 산책: 비슷한 성격의 암기거리 모음 — [이름(정답), 설명(단서), 문항 번호들]
+const KS_GROUPS = [
+  { id: "west", title: "인물 ① 서양인 (선교사·외교관·탐험가·학자)", entries: [
+    ["카르피나", "프란체스코회 수도사, 『몽골인의 역사』(1247)에서 고려를 '무지개가 뜨는 나라(Solanges)'로 표기", [3]],
+    ["주앙 로드리게스", "신부, 『일본에서의 교회의 역사』(1620~1621) — 일본 문화는 조선에서 전수, 대마도는 조선 영토", [5]],
+    ["프레데릭 불레스텍스", "한불 교류사를 호기심 단계 · 철학적 모색기 · 한국학 태동기로 구분", [6]],
+    ["라 페루즈 · 브로튼 · 바질 홀 · 귀츨라프 · 벨처", "18~19세기 해도를 작성하며 조선을 조사한 서양 탐험대 (1787·1797·1816·1832·1845)", [7]],
+    ["귀츨라프", "충청도 고대도에 한 달간 체류, 메드허스트와 『조선위국자휘』 공저", [7]],
+    ["로웰", "『조용한 아침의 나라: 조선』(1885), 한국 사회를 '개인성이 결여된 정체된 사회'로 각인", [8]],
+    ["칼스", "『조선풍물지』(1888)를 남긴 1880년대 서양 외교관", [8]],
+    ["다데슈칼리아니", "『내가 본 조선, 조선인』(1885)을 남긴 1880년대 서양 외교관", [8]],
+    ["모리스 쿠랑", "프랑스 외교관, 『한국서지』 집필, 『삼국사기』를 직접 인용한 최초의 서양학자", [9]],
+    ["샤를 달레", "신부, 『한국천주교회사』(1874) — 서양어로 서술된 근대 최초의 한국 입문서", [11]],
+    ["다블뤼", "근대 한국학의 '첫 삽'을 뜬 신부", [12]],
+    ["리델", "다블뤼가 첫 삽, 달레가 다진 토대에 '물을 준' 신부", [12]],
+    ["올링거", "미국 감리회 선교사, 1892년 『코리안 리포지터리』 창간 주도", [13]],
+    ["거빈스", "왕립아시아학회 한국지부(RASKB) 초대 회장", [15]],
+    ["존스 · 헐버트 · 게일", "영국왕립아시아학회에서 '선교사 겸 학자'로 불린 대표 인물", [16]],
+    ["트롤로프", "왕립아시아학회 한국지부에 적극 참여한 영국 국교회 선교사", [17]],
+    ["매큔", "라이샤워와 함께 매큔―라이샤워 표기법 개발 (2세대 연구자)", [18]],
+    ["스왈렌", "한국의 자장가를 연구한 2세대 연구자", [18]],
+    ["노블 · 매큔 · 스왈렌 · 윔볼드 · 에카르트", "1세대 이후 등장한 선교사 2세대·미국 학계·독일인 신부 연구자", [18]],
+    ["모스 · 지볼트 · 벨츠", "일본 연구의 출발점이 된 '고용 외국인'", [22]],
+    ["클레이", "『Weaker than a Woman』의 저자 (『장한몽』 삼중 번안의 출발)", [38]],
+    ["잉갈스", "'희망가'의 원곡이 된 찬송가의 작곡가", [39]],
+  ] },
+  { id: "japan", title: "인물 ② 일본인", entries: [
+    ["에노모토 다케아키", "일본 군국주의자·외교관, 1876년 달레의 책 일부를 일본어로 번역(『조선사정―원명 고려약사』)", [11]],
+    ["니토베 이나조 · 도리이 류조 · 무라야마 지준", "참여하면서 조선학 연구가 조선총독부 촉탁 업무와 긴밀하게 결합", [24]],
+    ["히시다 세이지", "RASKB에서 활동한 총독부 통역관 출신 일본인", [25]],
+    ["아사미 린타로", "RASKB에서 활동한 고등법원 판사", [25]],
+    ["가나자와 쇼사부로", "RASKB에서 활동한 도쿄제국대학 조선어 강사", [25]],
+    ["야마카타 이소우", "『서울 프레스』 주필, 『트랜잭션』에 식민 통치 정당화 글 발표", [25]],
+    ["고마쓰 미도리 · 이치하라 모리히로", "『트랜잭션』에 식민 통치 정당화 글 (총독부 외사국장 · 조선은행 총재)", [25]],
+    ["다카하시 도루", "경성제국대학 법문학부 교수, 1921년 『조선인』을 '비밀리에' 출간", [28]],
+    ["스에마쓰 야스카즈", "1936년 『조선사 길잡이』 집필 (조선사의 최고 권위자로 평가)", [29]],
+    ["핫토리 우노키치", "경성제국대학 초대 총장 — \"국가의 기초를 동요시키는 연구는 허용할 수 없다\"", [35]],
+    ["오자키 고요", "『곤지키야샤』의 저자 (『장한몽』 삼중 번안의 중간 단계)", [38]],
+  ] },
+  { id: "korea", title: "인물 ③ 한국인", entries: [
+    ["이덕주", "서양인의 저술을 '세계에 한국을 알리는 창' · '한국을 비추는 거울' · '한국과 세계를 이어 주는 다리'로 평가", [14]],
+    ["황교익", "돈가스를 '돼지고기 덴뿌라'라고 직관", [37]],
+    ["조중환", "『장한몽』(1913)을 번안한 사람 (삼중 번안)", [38]],
+    ["이도영", "1909년 『대한민보』 삽화 — 한국 근대 만화의 시작", [38]],
+    ["김산월", "1925년 '이 풍진 세상을'로 '희망가'를 유행시킴", [39]],
+    ["한대수", "'희망가'를 저항가요로 재탄생시킴", [39]],
+    ["이시스터즈 · 김치캐츠 · 신중현", "1960년대 모방을 혼종적 창조로 전환", [39]],
+  ] },
+  { id: "books", title: "책 · 간행물 · 작품", entries: [
+    ["『몽골인의 역사』(1247)", "카르피나가 고려를 '무지개가 뜨는 나라'로 표기한 책", [3]],
+    ["『일본에서의 교회의 역사』(1620~1621)", "주앙 로드리게스 — 기자 동래설·임나일본부설 등 왜곡된 전승을 서구에 전달", [5]],
+    ["『브로튼 항해기』", "조선을 방문한 영국인 항해자들의 기본 지침서", [7]],
+    ["『조선위국자휘』", "귀츨라프와 메드허스트의 공저", [7]],
+    ["『조용한 아침의 나라: 조선』(1885)", "로웰의 견문록", [8]],
+    ["『조선풍물지』(1888)", "칼스의 견문록", [8]],
+    ["『내가 본 조선, 조선인』(1885)", "다데슈칼리아니의 견문록", [8]],
+    ["『한국서지』(1894~1896, 1901)", "모리스 쿠랑 — 근대 한국학의 기념비적 성과", [9]],
+    ["『한국천주교회사』(1874)", "샤를 달레 — 서양어로 서술된 근대 최초의 한국 입문서", [11]],
+    ["『조선사정―원명 고려약사』", "1876년 에노모토 다케아키가 『한국천주교회사』 일부를 일본어로 번역한 책 (식민사관의 기본 구도 제공 혐의)", [11]],
+    ["『코리안 리포지터리』", "1892년 1월 창간, 최초의 영문 월간지 (선교지·학술지·시사 간행물)", [13]],
+    ["『트랜잭션(Transactions)』", "왕립아시아학회 한국지부(RASKB)의 학술지", [15]],
+    ["『서울 프레스』", "야마카타 이소우가 주필이었던 신문", [25]],
+    ["『조선사』 37권 (1932~1938)", "조선총독부가 발간해 특정 사료를 정전화", [27]],
+    ["『조선사강좌』 · 『조선사대계』(1927)", "관변 학회 조선사학회가 식민사관을 보급한 책", [27]],
+    ["『조선인』(1921)", "다카하시 도루가 '비밀리에' 출간 — 식민 통치 참고용 내부 서적, 경성제대 조선학의 지침서", [28]],
+    ["『조선사 길잡이』(1936)", "스에마쓰 야스카즈 — 식민 통치 25주년 기념으로 집필 의뢰", [29]],
+    ["『짧은 한국사(A Short History of Korea)』(1963)", "『조선사 길잡이』를 원본으로 동양문고가 편찬, 유네스코가 표준적 역사서로 출간", [29]],
+    ["『장한몽』(1913)", "『Weaker than a Woman』 → 『곤지키야샤』 → 조중환의 삼중 번안물", [38]],
+    ["『대한민보』 삽화(1909)", "이도영 — 한국 근대 만화의 시작", [38]],
+    ["『멍텅구리 헛물켜기』 · 『모던 춘향전』", "서구 카툰을 창의적으로 번안한 만화", [38]],
+    ["'이 풍진 세상을'(1925)", "김산월이 부른 '희망가'의 번안 가요", [39]],
+    ["'혈청지원가' ↔ '혈서지원'", "독립군가가 친일 군가의 곡조를 사용한 사례 (2005~2006 발굴)", [39]],
+  ] },
+  { id: "orgs", title: "단체 · 기관", entries: [
+    ["프란체스코회", "카르피나 수도사가 소속된 수도회", [3]],
+    ["예수회", "일본에 파견된 선교사들이 '꼬리아(Coria/Corea)' 표기를 정착시킴", [4]],
+    ["미국 감리회", "『코리안 리포지터리』를 주도한 올링거의 소속", [13]],
+    ["왕립아시아학회 한국지부(RASKB)", "1900년 6월 16일 서양인 17명이 서울에서 창립, 약 30년간 한국 연구 중심지", [15]],
+    ["영국 국교회", "트롤로프의 소속", [17]],
+    ["조선사편찬위원회(1922) → 조선사편수회(1925)", "조선총독부가 설치·개편한 조선사 편찬 기구", [27]],
+    ["조선사학회(1923)", "식민사관을 보급한 관변 학회", [27]],
+    ["경성제국대학(1924) → 국립서울대학교(1946)", "'지식―권력의 장치'였던 구조가 일정 부분 이어짐, 약 810명의 조선인 졸업생", [28, 35]],
+    ["도쿄제국대학", "'왜'보다 '어떻게'라는 노하우 중심 이식에 치우친 관학 체제로 출발", [35]],
+    ["동양문고 동아시아문화연구센터 · 하와이 동서센터 출판부", "『짧은 한국사』(1963)를 편찬하고 해외 보급을 담당", [29]],
+  ] },
+  { id: "terms", title: "개념 · 용어", entries: [
+    ["한국다움 · 한국의 정체성", "한국학이 한국이라는 공간을 전제로 탐구하는 대상", [1]],
+    ["본국학 · 조선학 · 국학", "과거에 한국학을 가리키던 명칭", [2]],
+    ["꼬리아(Coria/Corea)", "조선왕조 이후 예수회 선교사들을 통해 정착된 표기", [4]],
+    ["기자 동래설 · 임나일본부설", "로드리게스가 서구에 사실처럼 전달한 역사적 오류 → '타율적이고 종속적인 역사'로 오인", [5]],
+    ["식민사관", "에노모토의 번역서가 기본 구도를 제공했다는 혐의, 조선사학회가 보급", [11, 27]],
+    ["매큔―라이샤워 표기법", "매큔과 라이샤워가 개발한 표기법", [18]],
+    ["맞춤형 적용", "일본 제국이 영국의 인도 통치·독일의 폴란드 정책을 학습해 조선에 적용한 방식", [20]],
+    ["제국 클럽", "메이지 일본 정부가 가입을 갈망 → 조선의 식민지 경영 능력을 서구 열강에 과시", [21]],
+    ["외지(外地, 가이치)", "일본 제국이 타이완·조선 등을 '식민지' 대신 부른 공식 명칭", [23]],
+    ["내지(內地, 나이치)", "일본 본토 — 이를 확장하려는 구상 아래 차별화와 동질화를 동시에 추구", [23]],
+    ["촉탁", "초기 일본 학자들이 조선총독부와 결합한 업무 형태", [24]],
+    ["제1물결 / 제1.5물결 / 제2물결", "서양 선교사·외교관 / 일본 관학자 / 1920~1930년대 조선 지식인의 한국학 연구", [26, 30]],
+    ["정전화", "『조선사』 37권이 특정 사료에 한 일", [27]],
+    ["번안", "복제(Copy)·이식(Transplantation)과 달리 수용 주체가 시공간의 차이를 전유·변형하는 수행적 실천", [31]],
+    ["두 개의 서양 (서양 1 · 서양 2)", "일본이 번안한 서양 / 한국이 직접 대면한 미국 중심의 서양", [32]],
+    ["재번안", "1930년대 식민지 근대의 번안 양식이 1960년대 압축 성장 과정에서 다시 번안된 것", [33]],
+    ["중역 — '약'과 '독'", "일본어를 거친 번역: 신속한 제도 이식(약) / 구어·문어 괴리, 언문일치의 형식화(독)", [34]],
+    ["'일제의 정치적 지배는 말의 지배를 통해 완성되었다'", "근대어와 중역 과정을 요약한 명제", [34]],
+    ["지식―권력의 장치", "경성제국대학이 국립서울대학교로 재편된 뒤에도 일정 부분 이어진 구조", [35]],
+    ["관학 = 입신양명", "고등문관시험 합격 식민지 엘리트가 해방 후 재생산한 구조", [36]],
+    ["이중 번안 · 화양절충", "슈니첼 → 커틀릿 → 가쓰레쓰 → 돈가스, 약 60년에 걸친 일본식 결합", [37]],
+    ["삼중 번안", "『장한몽』처럼 세 번 번안된 작품", [38]],
+    ["이이제이 / 백전백패", "'알고 부르면 이이제이이지만 모르고 부르면 백전백패' — 혈청지원가의 교훈", [39]],
+  ] },
+  { id: "years", title: "연도 · 숫자", entries: [
+    ["1247년", "카르피나 『몽골인의 역사』", [3]],
+    ["1620~1621년", "주앙 로드리게스 『일본에서의 교회의 역사』", [5]],
+    ["1787 · 1797 · 1816 · 1832 · 1845년", "라 페루즈 · 브로튼 · 바질 홀 · 귀츨라프 · 벨처", [7]],
+    ["1854년", "미일화친조약 문서에 'Empire of Japan' 표기 — 일본이 '제국'을 자칭", [22]],
+    ["1874년", "샤를 달레 『한국천주교회사』", [11]],
+    ["1876년", "에노모토 다케아키의 일본어 번역 / 강화도조약", [11, 34]],
+    ["1885 · 1888년", "로웰·다데슈칼리아니의 견문록 / 칼스 『조선풍물지』", [8]],
+    ["1890~1892년", "모리스 쿠랑의 서울 체류", [9]],
+    ["1892년 1월", "『코리안 리포지터리』 창간", [13]],
+    ["1900년 6월 16일 · 17명", "왕립아시아학회 한국지부 창립 날짜와 창립 인원", [15]],
+    ["1909년", "이도영 『대한민보』 삽화 — 한국 근대 만화의 시작", [38]],
+    ["1910~1945년", "일제 식민지 시기 — 근대 인문·사회과학의 태동·정착 시기와 겹침", [19]],
+    ["1913년", "『장한몽』", [38]],
+    ["1921년", "다카하시 도루 『조선인』", [28]],
+    ["1922 → 1925년", "조선사편찬위원회 설치 → 조선사편수회로 개편", [27]],
+    ["1923년", "조선사학회 설립", [27]],
+    ["1924년 · 약 810명", "경성제국대학 설립 · 배출한 조선인 졸업생 수", [35]],
+    ["1925년", "김산월 '이 풍진 세상을'", [39]],
+    ["1932~1938년 · 37권", "『조선사』 발간 기간과 권수", [27]],
+    ["1936년 (식민 통치 25주년)", "『조선사 길잡이』 집필 의뢰", [29]],
+    ["1946년", "경성제국대학이 국립서울대학교로 재편", [35]],
+    ["239명 중 53명 (약 22%)", "경성제대 법학과 졸업생 중 고등문관시험 합격", [36]],
+    ["1963년", "『짧은 한국사(A Short History of Korea)』", [29]],
+    ["약 60년", "돈가스의 화양절충이 이루어진 기간", [37]],
+    ["2005~2006년", "독립군가 '혈청지원가' 발굴", [39]],
+  ] },
+];
+const KS_RED = new Set(KS_PRESET.items.filter((it) => it.red).map((it) => it.n));
+const groupEntries = (g) => g.entries.filter(([, , ns]) => !S.onlyEss || ns.some((n) => KS_RED.has(n)));
+
 // 문제은행 항목 → 개념(요약·카드·빈칸·고정 문제)
 function buildBankConcepts(items) {
   return items.map((it) => {
@@ -1410,7 +1554,7 @@ function viewSet() {
   const essCount = S.concepts.filter((c) => c.tier === "essential").length;
   let body = "";
   if (S.concepts.length) {
-    body = tab === "summary" ? viewSummary(list) : tab === "cards" ? viewCards(list) : tab === "cloze" ? viewCloze(list) : viewQuiz("essential");
+    body = tab === "summary" ? viewSummary(list) : tab === "cards" ? viewCards(list) : tab === "cloze" ? viewCloze(list) : tab === "groups" ? viewGroups() : viewQuiz("essential");
   }
   return `${setHeader(`<button class="btn sec" data-act="to-review">복습 화면</button>`)}
     ${errBox()}
@@ -1425,8 +1569,8 @@ function viewSet() {
       </div></details>` : ""}
     ${warnings.length ? `<details class="notice"><summary>자료 관련 안내 ${warnings.length}건</summary><ul class="small" style="margin-top:6px">${warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul></details>` : ""}
     ${S.concepts.length ? `
-      <div class="tabs" role="tablist">${[["summary", "핵심 요약"], ["cards", "암기 카드"], ["cloze", "빈칸 암기"], ["quiz", "실전 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${tab === id}" data-act="tab" data-tab="${id}">${l}</button>`).join("")}</div>
-      ${tab !== "quiz" ? `<label class="row small muted"><input type="checkbox" id="only-ess" data-act="only-ess" ${S.onlyEss ? "checked" : ""}> 필수 개념만 보기 (${essCount}/${S.concepts.length})</label>` : ""}
+      <div class="tabs" role="tablist">${[["summary", "핵심 요약"], ...(m.presetId === KS_PRESET.id ? [["groups", "모아보기"]] : []), ["cards", "암기 카드"], ["cloze", "빈칸 암기"], ["quiz", "실전 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${tab === id}" data-act="tab" data-tab="${id}">${l}</button>`).join("")}</div>
+      ${tab !== "quiz" ? `<label class="row small muted"><input type="checkbox" id="only-ess" data-act="only-ess" ${S.onlyEss ? "checked" : ""}> ${tab === "groups" ? "교수님 표시 문항만 보기" : "필수 개념만 보기"} (${essCount}/${S.concepts.length})</label>` : ""}
       ${body}` : ""}`;
 }
 function viewAnalyze() {
@@ -1463,6 +1607,19 @@ function viewSummary(list) {
     ${rateRow(c)}
   </article>`).join("");
 }
+// ───────── 모아보기 (한국학 산책: 인물·책·기관·용어·연도) ─────────
+function viewGroups() {
+  return `<p class="tiny muted">준비자료 40문항에서 같은 성격의 암기거리를 묶었습니다. '카드로 외우기'를 누르면 설명을 보고 이름을 떠올리는 카드로 학습합니다.</p>` +
+    KS_GROUPS.map((g) => {
+      const es = groupEntries(g);
+      if (!es.length) return "";
+      return `<section class="card">
+        <div class="between"><h2>${esc(g.title)} <span class="small muted mono">${es.length}</span></h2><button class="btn sec" data-act="group-cards" data-g="${g.id}">카드로 외우기</button></div>
+        <ul class="glist">${es.map(([name, desc, ns]) => `<li><div class="row" style="gap:6px"><b>${esc(name)}</b>${ns.some((n) => KS_RED.has(n)) ? badge("교수님 표시", "warn") : ""}<span class="tiny muted mono">${ns.map((n) => `${n}번`).join("·")}</span></div><p class="small muted">${esc(desc)}</p></li>`).join("")}</ul>
+      </section>`;
+    }).join("");
+}
+
 // ───────── 암기 카드 ─────────
 // kind: "qa"(문제 카드) | "memo"(핵심 문장 카드: 키워드를 가린 문장 → 전체 문장)
 // 자동 넘김: 앞면 → 뒷면 → 다음 카드, 정한 회차만큼 반복. "다시 볼 카드"(헷갈림·모름)만 다음 회차로 넘길 수 있다.
@@ -1474,6 +1631,11 @@ function memoCards(c) {
 const memoText = (t, reveal) => esc(t).replace(/\[\[([^\]]+)\]\]/g, (_, w) => (reveal ? `<mark>${w}</mark>` : `<span class="blank" aria-label="빈칸">${"＿".repeat(Math.min(6, Math.max(2, w.length)))}</span>`));
 function buildCards(list) {
   const mode = S.cardMode || "priority", kind = S.cardKind || "memo";
+  if (kind.startsWith("group:")) {
+    const g = KS_GROUPS.find((x) => x.id === kind.slice(6));
+    const cards = g ? groupEntries(g).map(([name, desc, ns]) => ({ front: desc, back: name, cid: `k${ns[0]}`, group: true })) : [];
+    return mode === "shuffle" ? shuffle(cards) : cards;
+  }
   const ordered = mode === "shuffle" ? list : [...list].sort((a, b) => priority(prog(b)) - priority(prog(a)));
   const all = ordered.flatMap((c) => (kind === "memo" ? memoCards(c) : c.flashcards.map((f) => ({ ...f, cid: c.id }))));
   return mode === "shuffle" ? shuffle(all) : all;
@@ -1514,7 +1676,7 @@ function viewCards(list) {
   const chips = (act, cur, opts) => opts.map(([v, l]) => `<button class="chip" data-act="${act}" data-v="${v}" aria-pressed="${String(cur) === String(v)}">${l}</button>`).join("");
   const sel = (id, cur, opts) => `<select id="${id}" class="field" style="width:auto;padding:6px 8px" data-auto="${id}">${opts.map(([v, l]) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${l}</option>`).join("")}</select>`;
   const controls = `<section class="card" style="gap:8px">
-    <div class="row small"><span class="label">카드 종류</span>${chips("card-kind", kind, [["memo", "암기 카드(핵심 문장)"], ["qa", "문제 카드"]])}</div>
+    <div class="row small"><span class="label">카드 종류</span>${chips("card-kind", kind, [["memo", "암기 카드(핵심 문장)"], ["qa", "문제 카드"]])}${S.meta.presetId === KS_PRESET.id ? `<select class="field" style="width:auto;padding:6px 8px" id="card-group" data-cardgroup aria-label="모아보기 묶음 카드"><option value="">묶음 카드 선택…</option>${KS_GROUPS.map((g) => `<option value="${g.id}" ${kind === "group:" + g.id ? "selected" : ""}>${esc(g.title)}</option>`).join("")}</select>` : ""}</div>
     <div class="row small"><span class="label">카드 순서</span>${chips("card-mode", mode, [["priority", "덜 외운 것부터"], ["shuffle", "무작위 섞기"]])}${mode === "shuffle" ? `<button class="btn ghost" data-act="cards-restart">다시 섞기</button>` : ""}</div>
     <div class="row small"><span class="label">자동 넘김</span>
       <button class="btn ${AUTO.on ? "sec" : ""}" data-act="auto-toggle">${AUTO.on ? "일시정지" : "자동 재생"}</button>
@@ -1532,7 +1694,9 @@ function viewCards(list) {
       <div class="row" style="justify-content:center">${again ? `<button class="btn" data-act="cards-again">헷갈린 ${again}장 다시</button>` : ""}<button class="btn sec" data-act="cards-round">전체 다시 (${k.round + 1}회차)</button><button class="btn ${again ? "sec" : ""}" data-act="tab" data-tab="quiz">실전 테스트</button></div></div>`;
   }
   const card = k.list[k.i], c = S.concepts.find((x) => x.id === card.cid);
-  const face = k.flipped
+  const face = card.group
+    ? (k.flipped ? `${badge("정답", "good")}<p class="q">${esc(card.back)}</p><p class="small muted" style="background:var(--surface);padding:0 6px">${esc(card.front)}</p><p class="tiny muted">출처 ${esc(src(c))}</p>` : `${badge("누구일까요? / 무엇일까요?", "acc")}<p class="q">${esc(card.front)}</p><p class="tiny muted">${AUTO.on ? "잠시 후 정답이 나옵니다" : "눌러서 정답 보기"}</p>`)
+    : k.flipped
     ? `${badge(card.memo ? "핵심 문장" : "정답", "good")}<p class="a">${card.memo ? memoText(card.back, true) : esc(card.back)}</p><p class="tiny muted">출처 ${esc(src(c))}</p>`
     : `${badge(card.memo ? "빈칸을 떠올려 보세요" : "질문", "acc")}<p class="q">${card.memo ? memoText(card.front, false) : esc(card.front)}</p>${card.memo ? `<p class="tiny muted">${esc(c.title)}</p>` : ""}<p class="tiny muted">${AUTO.on ? "잠시 후 정답이 나옵니다" : "눌러서 정답 보기"}</p>`;
   const timer = AUTO.on ? `<div class="tbar" style="animation-duration:${k.flipped ? AUTO.back : AUTO.front}s"></div>` : "";
@@ -1866,6 +2030,7 @@ const ACTIONS = {
   "card-next": () => { S.cards.i++; S.cards.flipped = false; render(); autoStep(); },
   "cards-restart": () => { stopAuto(); S.cards = null; render(); },
   "card-mode": (el) => { S.cardMode = el.dataset.v; S.cards = null; render(); },
+  "group-cards": (el) => { S.cardKind = `group:${el.dataset.g}`; S.cards = null; S.tab = "cards"; render(); window.scrollTo(0, 0); },
   "card-kind": (el) => { S.cardKind = el.dataset.v; S.cards = null; render(); },
   "cards-again": () => { const was = AUTO.onlyMissed; AUTO.onlyMissed = true; nextRound(); AUTO.onlyMissed = was; render(); autoStep(); },
   "cards-round": () => { const was = AUTO.onlyMissed; AUTO.onlyMissed = false; nextRound(); AUTO.onlyMissed = was; render(); autoStep(); },
@@ -1907,6 +2072,7 @@ document.addEventListener("change", (e) => {
   const el = e.target;
   if (el.dataset.act === "only-ess") return ACTIONS["only-ess"](el);
   if (el.dataset.act === "auto-missed") { AUTO.onlyMissed = el.checked; return; }
+  if ("cardgroup" in el.dataset) { S.cardKind = el.value ? `group:${el.value}` : "memo"; S.cards = null; return render(); }
   if (el.dataset.auto) { AUTO[{ "auto-front": "front", "auto-back": "back", "auto-rounds": "rounds" }[el.dataset.auto]] = +el.value; return autoStep(); }
   if (el.id === "d-files") {
     for (const file of Array.from(el.files || [])) {
