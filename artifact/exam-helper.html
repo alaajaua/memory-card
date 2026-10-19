@@ -129,6 +129,8 @@ textarea.field { resize: vertical; }
 .choice:hover:not(:disabled) { border-color: var(--accent); }
 .choice.right { border-color: var(--good); background: var(--good-soft); }
 .choice.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.choice.on { border-color: var(--accent); background: var(--accent-soft); }
+.choice.missed { border: 2px dashed var(--good); }
 .choice .n { color: var(--muted); font-family: var(--font-mono); }
 .answerbox { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
 .point { background: var(--mark); color: var(--mark-ink); border-radius: 8px; padding: 8px 12px; }
@@ -153,8 +155,8 @@ ol, ul { margin: 0; padding-left: 1.3em; }
 <script>
 "use strict";
 // ───────── 상수 ─────────
-const QTYPES = ["mcq", "ox", "short", "fill", "brief", "essay"];
-const QT = { mcq: "객관식", ox: "OX", short: "단답형", fill: "빈칸 채우기", brief: "약술형", essay: "서술형" };
+const QTYPES = ["mcq", "multi", "ox", "short", "fill", "brief", "essay"];
+const QT = { mcq: "객관식", multi: "모두 고르시오", ox: "OX", short: "단답형", fill: "빈칸 채우기", brief: "약술형", essay: "서술형" };
 const DIFF = { easy: "쉬움", normal: "보통", hard: "어려움" };
 const GOAL = { minimum: "최소 암기", standard: "일반 학습", high: "고득점 대비" };
 const GOAL_DESC = { minimum: "시험에 필요한 핵심만", standard: "주요 개념을 충분히", high: "세부 내용까지" };
@@ -170,6 +172,7 @@ try { PRESET = JSON.parse(document.getElementById("course-preset").textContent);
 // fills: [빈칸 문장, 정답("A / B" = 허용 답)]   ox: [문장, "O"|"X", 해설]
 const KS_PRESET = {
   id: "ks-mid-2026-2",
+  version: 2,
   name: "한국학 산책 중간고사",
   source: "2026-2 <한국학 산책> 중간고사 준비자료",
   note: "40문항 중 20문항 출제 · 빈칸 넣기(주관식)와 OX · 빨간 표시는 교수님이 짚어준 내용 (긴 문장 = OX, 키워드 = 빈칸)",
@@ -433,6 +436,26 @@ const KS_PRESET = {
   ],
 };
 
+// 한국학 산책: '모두 고르시오' 문제 (문항 번호 → [질문, 보기, 정답 보기들, 해설])
+const KS_MULTI = {
+  2: [["과거에 한국학을 가리키던 명칭을 모두 고르시오.", ["본국학", "조선학", "국학", "동양학", "한학"], ["본국학", "조선학", "국학"], "과거에는 본국학·조선학·국학 등의 명칭이 쓰였고, 오늘날에는 '한국학'을 씁니다."]],
+  5: [["주앙 로드리게스 신부의 『일본에서의 교회의 역사』에 대한 설명으로 옳은 것을 모두 고르시오.", ["일본 문화는 조선으로부터 전수되었다고 서술했다", "\"대마도는 원래 조선의 영토였다\"는 사실을 명기했다", "기자 동래설·임나일본부설 등 왜곡된 전승을 서구에 사실처럼 전달했다", "『삼국사기』를 직접 인용해 한국을 서술한 최초의 서양 저술이다"], ["일본 문화는 조선으로부터 전수되었다고 서술했다", "\"대마도는 원래 조선의 영토였다\"는 사실을 명기했다", "기자 동래설·임나일본부설 등 왜곡된 전승을 서구에 사실처럼 전달했다"], "『삼국사기』를 직접 인용한 최초의 서양학자는 모리스 쿠랑(9번)입니다."]],
+  7: [["18~19세기에 해도를 작성하며 조선을 조사한 서양 탐험대 인물을 모두 고르시오.", ["라 페루즈", "브로튼", "바질 홀", "귀츨라프", "모리스 쿠랑"], ["라 페루즈", "브로튼", "바질 홀", "귀츨라프"], "모리스 쿠랑은 1890년대 서울에 체류한 프랑스 외교관입니다."]],
+  8: [["1880년대 서양 외교관과 저술의 연결로 옳은 것을 모두 고르시오.", ["로웰 - 『조용한 아침의 나라: 조선』", "칼스 - 『조선풍물지』", "다데슈칼리아니 - 『내가 본 조선, 조선인』", "칼스 - 『한국서지』"], ["로웰 - 『조용한 아침의 나라: 조선』", "칼스 - 『조선풍물지』", "다데슈칼리아니 - 『내가 본 조선, 조선인』"], "『한국서지』는 모리스 쿠랑의 저술입니다."]],
+  11: [["샤를 달레 신부의 『한국천주교회사』(1874)에 대한 설명으로 옳은 것을 모두 고르시오.", ["서양어로 서술된 근대 최초의 한국 입문서이다", "1876년 에노모토 다케아키가 서설과 제2권 일부를 일본어로 번역했다", "일본어 번역서는 『조선사정―원명 고려약사』라는 제목으로 출간되었다", "미국 감리회 선교사 올링거가 주도해 창간했다"], ["서양어로 서술된 근대 최초의 한국 입문서이다", "1876년 에노모토 다케아키가 서설과 제2권 일부를 일본어로 번역했다", "일본어 번역서는 『조선사정―원명 고려약사』라는 제목으로 출간되었다"], "올링거가 주도해 창간한 것은 『코리안 리포지터리』(13번)입니다."]],
+  13: [["『코리안 리포지터리』의 성격으로 옳은 것을 모두 고르시오.", ["기독교 선교 사업의 이모저모를 전달하는 선교지", "한국학 전문가들의 최신 연구 결과를 소개하는 학술지", "조선과 주변국의 외교·정치 변화를 추적하는 시사 간행물", "조선총독부가 발행한 관변 학술지"], ["기독교 선교 사업의 이모저모를 전달하는 선교지", "한국학 전문가들의 최신 연구 결과를 소개하는 학술지", "조선과 주변국의 외교·정치 변화를 추적하는 시사 간행물"], "1892년 1월 올링거 주도로 창간된 최초의 영문 월간지로, 선교지·학술지·시사 간행물의 성격을 모두 가졌습니다."]],
+  14: [["이덕주가 서양인들의 한국 관련 저술 활동을 평가한 표현을 모두 고르시오.", ["세계에 한국을 알리는 창", "한국을 비추는 거울", "한국과 세계를 이어 주는 다리", "서양을 비추는 거울"], ["세계에 한국을 알리는 창", "한국을 비추는 거울", "한국과 세계를 이어 주는 다리"], "창·거울·다리: '세계에 한국을 알리는 창', '한국을 비추는 거울', '한국과 세계를 이어 주는 다리'."]],
+  16: [["영국왕립아시아학회에서 '선교사 겸 학자'로 불린 대표적인 인물을 모두 고르시오.", ["존스", "헐버트", "게일", "트롤로프", "거빈스"], ["존스", "헐버트", "게일"], "트롤로프는 한국지부에 적극 참여한 영국 국교회 선교사, 거빈스는 초대 회장입니다."]],
+  18: [["1세대 이후 등장한 2세대·전문 연구자로 제시된 인물을 모두 고르시오.", ["노블", "매큔", "스왈렌", "에카르트", "다카하시 도루"], ["노블", "매큔", "스왈렌", "에카르트"], "다카하시 도루는 경성제국대학 법문학부 교수(28번)입니다."]],
+  21: [["일본 제국의 조선학 연구에 대한 설명으로 옳은 것을 모두 고르시오.", ["메이지 일본 정부가 갈망하던 '제국 클럽' 가입과 관련된다", "조선의 식민지 경영 능력을 서구 열강에 과시하려는 노력의 산물이었다", "조선인의 학문 발전을 돕기 위한 순수 학술 활동이었다"], ["메이지 일본 정부가 갈망하던 '제국 클럽' 가입과 관련된다", "조선의 식민지 경영 능력을 서구 열강에 과시하려는 노력의 산물이었다"], "순수 학술 활동이 아니라 '제국 클럽' 가입을 위한 과시의 산물이었습니다."]],
+  23: [["외지(外地)·내지(內地)에 대한 설명으로 옳은 것을 모두 고르시오.", ["일본 제국은 타이완과 조선 등을 공식적으로 '외지'라고 불렀다", "일본 본토를 '내지'라고 불렀다", "언어적 정치학의 일환으로 차별화와 동질화를 동시에 추구했다", "일본 제국은 조선을 공식적으로 '식민지'라고 불렀다"], ["일본 제국은 타이완과 조선 등을 공식적으로 '외지'라고 불렀다", "일본 본토를 '내지'라고 불렀다", "언어적 정치학의 일환으로 차별화와 동질화를 동시에 추구했다"], "공식적으로는 '식민지'가 아니라 '외지(가이치)'라고 불렀습니다."]],
+  26: [["근대 한국학의 물결 구분으로 옳은 것을 모두 고르시오.", ["제1물결: 19세기 중후반~20세기 초 서양 선교사와 외교관의 한국학 연구", "제1.5물결: 식민지 시기 일본 관학자들의 조선학 연구", "제2물결: 1920~1930년대 조선 지식인들이 주도한 한국학 연구", "제2물결: 해방 이후 미국 학자들이 주도한 한국학 연구"], ["제1물결: 19세기 중후반~20세기 초 서양 선교사와 외교관의 한국학 연구", "제1.5물결: 식민지 시기 일본 관학자들의 조선학 연구", "제2물결: 1920~1930년대 조선 지식인들이 주도한 한국학 연구"], "제2물결은 1920~1930년대 '조선 지식인'의 연구입니다."]],
+  27: [["조선총독부와 관변 학회의 식민사관 관련 활동으로 옳은 것을 모두 고르시오.", ["1925년 조선사편찬위원회를 조선사편수회로 개편했다", "1932~1938년 『조선사』 37권을 발간해 특정 사료를 정전화했다", "조선사학회가 『조선사강좌』와 『조선사대계』로 식민사관을 보급했다", "1946년 국립서울대학교를 설립했다"], ["1925년 조선사편찬위원회를 조선사편수회로 개편했다", "1932~1938년 『조선사』 37권을 발간해 특정 사료를 정전화했다", "조선사학회가 『조선사강좌』와 『조선사대계』로 식민사관을 보급했다"], "1946년 국립서울대학교 재편은 경성제국대학(35번)의 이야기입니다."]],
+  34: [["근대어와 일본어 중역에 대한 설명으로 옳은 것을 모두 고르시오.", ["조선은 한문 맥락을 공유해 일본어 중역의 경로를 택했다", "중역은 신속한 제도 이식이라는 '약'이었다", "중역은 구어·문어의 괴리와 언문일치의 형식화를 낳은 '독'이기도 했다", "조선은 주로 서양 텍스트를 직접 번역하는 경로를 택했다"], ["조선은 한문 맥락을 공유해 일본어 중역의 경로를 택했다", "중역은 신속한 제도 이식이라는 '약'이었다", "중역은 구어·문어의 괴리와 언문일치의 형식화를 낳은 '독'이기도 했다"], "직접 번역이 아니라 일본어 중역의 경로를 택했습니다."]],
+  37: [["돈가스가 거친 '이중 번안'의 단계에 해당하는 것을 모두 고르시오.", ["슈니첼(오스트리아·독일)", "커틀릿(영국·미국)", "가쓰레쓰(메이지 일본)", "덴뿌라(포르투갈)"], ["슈니첼(오스트리아·독일)", "커틀릿(영국·미국)", "가쓰레쓰(메이지 일본)"], "슈니첼 → 커틀릿 → 가쓰레쓰 → 돈가스(한국)의 네 단계입니다. '돼지고기 덴뿌라'는 황교익의 표현입니다."]],
+  40: [["번안 가요에 대한 설명으로 옳은 것을 모두 고르시오.", ["잡지와 라디오의 확산을 통해 한국 대중음악의 형성에 기여했다", "1960년대 이후 과도적 지위와 영향력이 약화되었다", "1970년대에 미국 팝·포크 수용과 전통 민요의 재해석으로 나뉘었다", "1970년대 이후 일본 엔카 수용이 주류가 되었다"], ["잡지와 라디오의 확산을 통해 한국 대중음악의 형성에 기여했다", "1960년대 이후 과도적 지위와 영향력이 약화되었다", "1970년대에 미국 팝·포크 수용과 전통 민요의 재해석으로 나뉘었다"], "1970년대 번안의 방향은 미국 팝·포크 수용과 전통 민요의 재해석이었습니다."]],
+};
+
 // 문제은행 세트: 준비자료 문항을 개념 + 고정 문제로 바꾼다 (AI 분석 없이 바로 학습)
 function ksConcepts() {
   return KS_PRESET.items.map((it, i) => {
@@ -440,6 +463,7 @@ function ksConcepts() {
     const bank = [
       ...it.fills.map(([q, a]) => ({ type: "fill", question: q, choices: [], answer: a, explanation: it.text, keyPoint, requiredKeywords: [], modelAnswer: "" })),
       ...it.ox.map(([q, a, why]) => ({ type: "ox", question: q, choices: ["O", "X"], answer: a, explanation: why, keyPoint, requiredKeywords: [], modelAnswer: "" })),
+      ...(KS_MULTI[it.n] || []).map(([q, ch, ans, why]) => ({ type: "multi", question: q, choices: ch, answers: ans, answer: ans.join(" / "), explanation: why, keyPoint, requiredKeywords: [], modelAnswer: "" })),
     ];
     const cards = [
       ...it.fills.map(([q, a]) => ({ front: q, back: a.split(" / ")[0] })),
@@ -613,8 +637,21 @@ async function openSet(id, view = "set") {
     S.meta = { id, ...meta.data() };
     S.concepts = (await getAll(P.concepts(id))).sort((a, b) => (a.order || 0) - (b.order || 0));
     S.attempts = (await getAll(P.attempts(id))).sort((a, b) => a.at - b.at);
+    if (S.meta.presetId === KS_PRESET.id && (S.meta.presetVersion || 1) < KS_PRESET.version) await upgradeKsSet();
   } catch (e) { S.error = dbErrorText(e); }
   render();
+}
+
+// 문제은행이 바뀌면 개념·문제만 새로 쓰고 학습 기록(progress)은 그대로 둔다
+async function upgradeKsSet() {
+  const old = new Map(S.concepts.map((c) => [c.id, c.progress]));
+  const fresh = ksConcepts().map((c) => ({ ...c, progress: old.get(c.id) || EMPTY }));
+  for (const c of fresh) await put(`${P.concepts(S.meta.id)}/${c.id}`, c);
+  const types = ["multi", ...S.meta.settings.types.filter((t) => t !== "multi")];
+  S.meta.settings = { ...S.meta.settings, types };
+  S.meta.presetVersion = KS_PRESET.version;
+  await patch(P.set(S.meta.id), { settings: S.meta.settings, presetVersion: KS_PRESET.version });
+  S.concepts = fresh;
 }
 
 async function touchMeta() {
@@ -808,6 +845,7 @@ function quizPrompt(s, concepts, counts, avoid) {
   return `당신은 대학 시험 출제자입니다. 아래 개념 목록(강의 자료에서 추출)만 근거로 실전형 문제를 만드세요.
 - 자료에 없는 외부 지식으로 문제를 만들지 않는다. conceptId에는 주어진 개념 id를 그대로 넣는다.
 - mcq(객관식): choices 4~5개, answer는 정답 보기 텍스트와 정확히 동일. 오답 보기는 헷갈리는 개념을 활용.
+- multi(모두 고르시오): "옳은 것을 모두 고르시오"처럼 묻고 choices 4~5개, answers는 정답 보기 텍스트의 배열(2개 이상, 보기 수보다 적게), answer는 answers를 " / "로 이은 문자열. 오답 보기는 다른 개념·뒤바뀐 사실로 만든다.
 - ox: choices ["O","X"], answer "O" 또는 "X".
 - short(단답형): answer는 핵심 용어 하나(동의어가 있으면 "용어A / 용어B"), choices [].
 - fill(빈칸 채우기): question에 빈칸을 "_____"로 표시, answer는 빈칸 단어, choices [].
@@ -825,7 +863,7 @@ ${avoid.length ? `\n[이전에 낸 문제 — 반복 금지]\n${avoid.slice(-40)
 ${JSON.stringify(list)}
 
 출력: JSON 객체 하나만.
-{"questions":[{"type":"mcq","conceptId":"개념 id","question":"","choices":[],"answer":"","explanation":"","keyPoint":"","requiredKeywords":[],"modelAnswer":""}]}`;
+{"questions":[{"type":"mcq","conceptId":"개념 id","question":"","choices":[],"answers":[],"answer":"","explanation":"","keyPoint":"","requiredKeywords":[],"modelAnswer":""}]}`;
 }
 function gradePrompt(q, answer) {
   return `당신은 대학 시험 채점자입니다. 학생 답안을 모범답안·필수 키워드와 비교해 채점하세요.
@@ -857,11 +895,16 @@ function cleanConcept(c) {
 function cleanQuestions(raw, ids, types) {
   return arr(raw && raw.questions).map((q) => ({
     id: uid(), type: QTYPES.includes(q && q.type) ? q.type : "", conceptId: str(q && q.conceptId), question: str(q && q.question),
-    choices: strs(q && q.choices), answer: str(q && q.answer), explanation: str(q && q.explanation), keyPoint: str(q && q.keyPoint),
+    choices: strs(q && q.choices), answers: strs(q && q.answers), answer: str(q && q.answer), explanation: str(q && q.explanation), keyPoint: str(q && q.keyPoint),
     requiredKeywords: strs(q && q.requiredKeywords), modelAnswer: str(q && q.modelAnswer),
   })).filter((q) => {
     if (!q.type || !types.includes(q.type) || !ids.has(q.conceptId) || !q.question) return false;
     if (q.type === "ox") q.choices = ["O", "X"];
+    if (q.type === "multi") {
+      q.answers = q.answers.filter((a) => q.choices.includes(a));
+      q.answer = q.answers.join(" / ");
+      return q.choices.length >= 3 && q.answers.length >= 1 && q.answers.length < q.choices.length;
+    }
     if (q.type === "mcq" || q.type === "ox") return q.choices.includes(q.answer);
     return Boolean(q.answer || q.modelAnswer);
   });
@@ -992,7 +1035,7 @@ function viewNew() {
 
 function defaultTab(s) {
   const main = [...s.types].sort((a, b) => (s.weights[b] || 0) - (s.weights[a] || 0))[0];
-  return { mcq: "cards", ox: "cards", short: "cloze", fill: "cloze", brief: "summary", essay: "summary" }[main] || "summary";
+  return { mcq: "cards", multi: "cards", ox: "cards", short: "cloze", fill: "cloze", brief: "summary", essay: "summary" }[main] || "summary";
 }
 function setHeader(link) {
   const m = S.meta, s = m.settings;
@@ -1124,8 +1167,9 @@ function viewQuiz(defaultScope) {
       <div><p class="label">출제 범위</p><div class="row">${Object.keys(SCOPE).map((s) => `<button class="chip" data-act="q-scope" data-s="${s}" aria-pressed="${q.scope === s}">${scopeLabel(s)}</button>`).join("")}</div></div>
       <div><p class="label">출제 유형</p><div class="row">${set.types.map((t) => `<button class="chip" data-act="q-type" data-t="${t}" aria-pressed="${q.types.includes(t)}">${QT[t]}${set.weights[t] ? ` ${set.weights[t]}%` : ""}</button>`).join("")}</div></div>
       <div><p class="label">문제 수</p><div class="row">${(S.meta.bankMode ? [10, 20, 40] : [5, 10, 15]).map((n) => `<button class="chip mono" data-act="q-count" data-n="${n}" aria-pressed="${q.count === n}">${n}</button>`).join("")}</div></div>
-      <button class="btn wide" data-act="q-gen" ${S.busy === "quiz" ? "disabled" : ""}>${S.busy === "quiz" ? '<span class="spin"></span>AI가 문제를 만드는 중…' : S.meta.bankMode ? "문제 풀기" : "문제 만들기"}</button>
-      <p class="tiny muted">${S.meta.bankMode ? "준비자료 문제은행에서 출제합니다(AI 사용 없음). 20문제는 실제 시험 분량이며, 덜 외운 문항과 아직 안 푼 문제가 먼저 나옵니다." : "덜 외운 개념부터 출제되고, 이전에 푼 문제와 다른 형태로 만들어집니다."}</p>
+      <button class="btn wide" data-act="q-gen" ${S.busy === "quiz" ? "disabled" : ""}>${S.busy === "quiz" && !q.ai ? '<span class="spin"></span>AI가 문제를 만드는 중…' : S.meta.bankMode ? "문제은행에서 풀기" : "문제 만들기"}</button>
+      ${S.meta.bankMode && SAMPLE ? `<button class="btn sec wide" data-act="q-gen-ai" ${S.busy === "quiz" ? "disabled" : ""}>${S.busy === "quiz" ? '<span class="spin"></span>AI가 새 문제를 만드는 중…' : "AI로 새 변형 문제 만들기"}</button>` : ""}
+      <p class="tiny muted">${S.meta.bankMode ? "문제은행: 준비자료로 미리 만든 문제(AI 사용 없음), 덜 외운 문항과 안 푼 문제가 먼저 나옵니다. AI 변형 문제: 같은 범위에서 매번 새 문제를 만들며 내 Claude 사용량을 씁니다(최대 15문제)." : "덜 외운 개념부터 출제되고, 이전에 푼 문제와 다른 형태로 만들어집니다."}</p>
     </section>`;
   }
   if (q.i >= q.questions.length) {
@@ -1139,7 +1183,15 @@ function viewQuiz(defaultScope) {
   const item = q.questions[q.i], r = q.result, c = S.concepts.find((x) => x.id === item.conceptId);
   const choice = item.type === "mcq" || item.type === "ox", long = item.type === "brief" || item.type === "essay";
   let input = "";
-  if (choice) {
+  if (item.type === "multi") {
+    const picked = r ? r.picked || [] : q.picked || [];
+    input = `<p class="tiny muted">정답을 모두 선택한 뒤 제출하세요. 정답이 여러 개일 수 있습니다.</p><div class="stack" style="gap:8px">${item.choices.map((ch, i) => {
+      const on = picked.includes(ch), isAns = item.answers.includes(ch);
+      const cls = r ? (isAns && on ? "right" : isAns ? "missed" : on ? "wrong" : "") : on ? "on" : "";
+      const mark = r ? (isAns ? "정답" : on ? "오답" : "") : "";
+      return `<button class="choice ${cls}" data-act="q-pick" data-i="${i}" aria-pressed="${on}" ${r ? "disabled" : ""}><span class="n">${on ? "■" : "□"}</span><span style="flex:1">${esc(ch)}</span>${mark ? `<span class="tiny">${mark}</span>` : ""}</button>`;
+    }).join("")}</div>${r ? "" : `<div class="row"><button class="btn" style="flex:1" data-act="q-multi">제출</button><button class="btn sec" data-act="q-multi-skip">모르겠음</button></div>`}`;
+  } else if (choice) {
     input = `<div class="stack" style="gap:8px">${item.choices.map((ch, i) => {
       const cls = r ? (ch === item.answer ? "right" : r.userAnswer === ch ? "wrong" : "") : "";
       return `<button class="choice ${cls}" data-act="q-choice" data-i="${i}" ${r || S.busy === "grade" ? "disabled" : ""}>${item.type === "mcq" ? `<span class="n">${i + 1}</span>` : ""}<span>${esc(ch)}</span></button>`;
@@ -1150,7 +1202,7 @@ function viewQuiz(defaultScope) {
   }
   const res = r ? `<div class="stack" style="border-top:1px solid var(--line);padding-top:12px;gap:10px">
       <div>${badge(VERDICT[r.verdict], r.verdict === "correct" ? "good" : r.verdict === "partial" ? "warn" : "bad")}</div>
-      ${!choice ? `<p class="small"><span class="muted">내 답 · </span>${esc(r.userAnswer)}</p>` : ""}
+      ${!choice && item.type !== "multi" ? `<p class="small"><span class="muted">내 답 · </span>${esc(r.userAnswer)}</p>` : ""}
       ${r.feedback ? `<p class="small">${esc(r.feedback)}</p>` : ""}
       ${r.missing.length ? `<p class="small" style="color:var(--bad)"><b>부족한 내용 · </b>${esc(r.missing.join(", "))}</p>` : ""}
       <div class="answerbox"><p class="label">${long ? "모범답안" : "정답"}</p><p style="white-space:pre-line">${esc(long ? item.modelAnswer || item.answer : item.answer)}</p>${item.requiredKeywords.length ? `<p class="tiny muted">필수 키워드 · ${esc(item.requiredKeywords.join(", "))}</p>` : ""}</div>
@@ -1228,7 +1280,8 @@ async function createKsSet() {
   const id = uid(), now = Date.now(), concepts = ksConcepts();
   const meta = {
     id, presetId: KS_PRESET.id, bankMode: true, name: KS_PRESET.name, createdAt: now, updatedAt: now,
-    settings: { types: ["fill", "ox"], weights: {}, difficulty: "normal", goal: "standard", emphasis: KS_PRESET.note, scope: "준비자료 1~40번", examDate: "", pastExam: "" },
+    presetVersion: KS_PRESET.version,
+    settings: { types: ["multi", "fill", "ox"], weights: {}, difficulty: "normal", goal: "standard", emphasis: KS_PRESET.note, scope: "준비자료 1~40번", examDate: "", pastExam: "" },
     materials: [{ lecture: "중간고사 준비자료", fileName: KS_PRESET.source, pageCount: 4, warnings: [] }],
     strategy: KS_PRESET.strategy, notes: [], chunksTotal: 0, chunksDone: 0, conceptCount: concepts.length,
     stat: { essential: concepts.filter((c) => c.tier === "essential").length, mastered: 0 },
@@ -1288,10 +1341,12 @@ function bankQuiz(q) {
   const out = [];
   for (let round = 0; out.length < q.count && pools.some((p) => p.length > round); round++)
     for (const p of pools) { if (out.length >= q.count) break; if (p[round]) out.push({ ...p[round], id: uid() }); }
+  for (const x of out) if (x.type === "multi") x.choices = shuffle(x.choices);
   return shuffle(out);
 }
-async function genQuiz() {
-  if (S.meta.bankMode) {
+async function genQuiz(ai = false) {
+  S.quiz.ai = ai;
+  if (S.meta.bankMode && !ai) {
     const questions = bankQuiz(S.quiz);
     if (!questions.length) { S.error = S.quiz.scope === "weak" ? "취약 문항이 없습니다. 먼저 문제를 풀어보세요." : "출제할 문제가 없습니다."; return render(); }
     S.error = "";
@@ -1305,7 +1360,7 @@ async function genQuiz() {
   const avoid = S.attempts.filter((a) => ids.has(a.question.conceptId)).map((a) => a.question.question);
   S.busy = "quiz"; S.error = ""; render();
   try {
-    const raw = await SAMPLE.json(quizPrompt(S.meta.settings, concepts, splitCounts(q.types, S.meta.settings.weights, q.count), avoid), { modelTier: "default", cache: false });
+    const raw = await SAMPLE.json(quizPrompt(S.meta.settings, concepts, splitCounts(q.types, S.meta.settings.weights, Math.min(q.count, 15)), avoid), { modelTier: "default", cache: false });
     const questions = cleanQuestions(raw, ids, q.types);
     if (!questions.length) throw { code: "invalid_json" };
     Object.assign(q, { questions, i: 0, answer: "", result: null, score: [] });
@@ -1323,6 +1378,15 @@ async function record(item, userAnswer, g) {
     await put(`${P.attempts(S.meta.id)}/${a.id}`, a);
     if (c) await saveProgress(c, applyVerdict(prog(c), g.verdict));
   } catch (e) { S.error = dbErrorText(e); render(); }
+}
+function submitMulti(skip) {
+  const q = S.quiz, item = q.questions[q.i], picked = skip ? [] : item.choices.filter((c) => (q.picked || []).includes(c));
+  if (!skip && !picked.length) { S.error = "보기를 하나 이상 선택하세요."; return render(); }
+  const wrongPick = picked.filter((c) => !item.answers.includes(c)), missed = item.answers.filter((c) => !picked.includes(c));
+  const verdict = !wrongPick.length && !missed.length ? "correct" : !wrongPick.length && picked.length ? "partial" : "wrong";
+  const feedback = verdict === "correct" ? "" : [missed.length ? `빠뜨린 정답 ${missed.length}개` : "", wrongPick.length ? `잘못 고른 보기 ${wrongPick.length}개` : ""].filter(Boolean).join(" · ");
+  S.error = ""; q.picked = [];
+  record(item, picked.join(" / ") || "(모름)", { verdict, feedback, missing: missed, picked });
 }
 async function submit(userAnswer) {
   const item = S.quiz.questions[S.quiz.i];
@@ -1397,12 +1461,16 @@ const ACTIONS = {
   "q-scope": (el) => { S.quiz.scope = el.dataset.s; render(); },
   "q-type": (el) => { const q = S.quiz, t = el.dataset.t; q.types = q.types.includes(t) ? (q.types.length > 1 ? q.types.filter((x) => x !== t) : q.types) : [...q.types, t]; render(); },
   "q-count": (el) => { S.quiz.count = +el.dataset.n; render(); },
-  "q-gen": () => genQuiz(),
+  "q-gen": () => genQuiz(S.quiz.ai && S.quiz.questions ? true : false),
+  "q-gen-ai": () => genQuiz(true),
   "q-setup": () => { S.quiz.questions = null; render(); },
+  "q-pick": (el) => { const q = S.quiz, ch = q.questions[q.i].choices[+el.dataset.i]; q.picked = (q.picked || []).includes(ch) ? q.picked.filter((x) => x !== ch) : [...(q.picked || []), ch]; render(); },
+  "q-multi": () => submitMulti(false),
+  "q-multi-skip": () => submitMulti(true),
   "q-choice": (el) => submit(S.quiz.questions[S.quiz.i].choices[+el.dataset.i]),
   "q-submit": () => submit(S.quiz.answer),
   "q-skip": () => submit(""),
-  "q-next": () => { Object.assign(S.quiz, { i: S.quiz.i + 1, result: null, answer: "" }); S.error = ""; render(); },
+  "q-next": () => { Object.assign(S.quiz, { i: S.quiz.i + 1, result: null, answer: "", picked: [] }); S.error = ""; render(); },
 };
 document.addEventListener("click", (e) => {
   const el = e.target.closest("[data-act]");
