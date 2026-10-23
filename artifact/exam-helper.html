@@ -120,6 +120,40 @@ textarea.field { resize: vertical; }
 .rate .r-dontknow[aria-pressed="true"] { border-color: var(--bad); }
 
 .cloze { line-height: 2.4; }
+.easy { gap: 12px; }
+.easy.covered > :is(.one, .eblock, .formula, .tblwrap, .esplit, .hook, .trap) { display: none; }
+.easy .one { font-size: 1.06rem; font-weight: 500; line-height: 1.7; }
+.formula { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.formula .term { background: var(--accent-soft); border-radius: 8px; padding: 6px 10px; font-weight: 500; }
+.formula .op { color: var(--accent); font-weight: 700; font-size: 1.1rem; }
+.eblock { display: flex; flex-direction: column; gap: 6px; }
+.flow { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.flow li { position: relative; padding: 6px 0 6px 26px; }
+.flow li::before { content: ""; position: absolute; left: 6px; top: 13px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.flow li:not(:last-child)::after { content: ""; position: absolute; left: 10px; top: 25px; bottom: -11px; width: 2px; background: var(--line); }
+.pts { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.pt { display: flex; gap: 10px; align-items: flex-start; background: var(--bg); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.pn { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 0.75rem; }
+.tblwrap { overflow-x: auto; }
+.etbl { border-collapse: collapse; width: 100%; font-size: 0.86rem; min-width: 420px; }
+.etbl th, .etbl td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+.etbl thead th { background: var(--accent-soft); }
+.etbl tbody th { background: var(--bg); white-space: nowrap; }
+.esplit { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.esplit .side { border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.esplit .s0 { background: var(--accent-soft); }
+.esplit .s1 { background: var(--warn-soft); }
+.esplit ul { margin: 4px 0 0; }
+@media (max-width: 520px) { .esplit { grid-template-columns: 1fr; } }
+.hook { background: var(--mark); color: var(--mark-ink); border-radius: 8px; padding: 8px 12px; }
+.hook .label, .trap .label { color: inherit; margin-right: 4px; }
+.trap { background: var(--bad-soft); border-radius: 8px; padding: 8px 12px; }
+.check { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; line-height: 2; }
+.tapblank { border: 0; background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 0 6px; margin: 0 2px; cursor: pointer; font: inherit; }
+.tapblank .ans { display: none; }
+.tapblank.shown { background: var(--mark); color: var(--mark-ink); font-weight: 700; }
+.tapblank.shown .ans { display: inline; }
+.tapblank.shown .hid { display: none; }
 .drill { gap: 12px; }
 .dprompt { font-size: 1.05rem; line-height: 1.9; }
 .dprompt b { color: var(--muted); font-weight: 500; }
@@ -945,6 +979,163 @@ const KS_RED_ENTRIES = new Set(["주앙 로드리게스", "모리스 쿠랑", "�
 const isRedEntry = (name) => KS_RED_ENTRIES.has(name);
 const groupEntries = (g) => g.entries.filter(([name]) => !S.onlyEss || isRedEntry(name));
 
+// 한류와아시아문화교류: 개념을 쉽게 이해하는 구조 (강의자료 내용만 사용, '외우는 요령'은 암기 보조)
+// v: 시각 블록 목록 — flow(흐름), points(번호 목록), table(비교표), split(두 칸 비교), formula(공식)
+const HR_EASY = {
+  1: { one: "대중 = 엘리트가 아닌 '다수의 사람들'. 영어 Mass는 '덩어리'라는 말에서 왔다.",
+    v: [{ t: "formula", p: ["Mass", "←", "그리스어 마자(maza)", "=", "보리를 짓이긴 과자, '덩어리'"] },
+        { t: "points", title: "대중의 특성 (엘리트와 상대되는 개념)", items: [["수동적", ""], ["감정적", ""], ["비합리적", ""]] }],
+    hook: "대중은 하나하나가 아니라 '덩어리'. 특성은 수·감·비 (수동적·감정적·비합리적)", trap: "능동적·이성적·합리적 → X" },
+  2: { one: "대중문화는 한 가지 뜻이 아니다. 강의에서 5가지로 정리했다.",
+    v: [{ t: "points", title: "대중문화의 정의 5가지", items: [["다수", "많은 사람들이 널리 좋아하는 문화 (판매량·시청률 같은 수치로 분석하는 양적 개념)"], ["나머지", "고급문화 이외의 나머지 문화"], ["대량", "대중의 선호에 맞춰 대량소비를 위해 대량생산된 문화"], ["민중", "민중(the people)으로부터 생겨나는 문화"], ["참여", "미디어·플랫폼으로 생산·공유·소비하며 참여와 재생산으로 변하는 문화 (오늘날)"]] }],
+    hook: "다·나·대·민·참", trap: "소수 엘리트의 정통 예술은 대중문화의 정의가 아니다" },
+  3: { one: "'대중문화는 열등, 고급문화는 창조'라는 나누기가 있다. 그런데 정말 나눌 수 있을까?",
+    v: [{ t: "table", head: ["", "대중문화", "고급문화"], rows: [["만드는 방식", "대량생산되는 상업적 문화", "개별적인 창조활동의 결과"], ["예", "대중신문 · 대중영화 · 대중음악", "고급신문 · 예술영화 · 클래식"]] },
+        { t: "flow", title: "반례: 파바로티", items: ["푸치니 앨범 1990년 영국 판매 1위", "BBC 공식 월드컵 테마곡", "1991 하이드파크 무료공연 10만 명", "고급문화도 대중이 즐긴다 → 구분이 흐려짐"] }],
+    hook: "오페라가 차트 1위 → 경계가 흐려진다", trap: "" },
+  4: { one: "내가 좋아서 고른 것 같지만, 사실은 문화산업이 좋아하게 만든 것이다.",
+    v: [{ t: "flow", title: "문화산업의 작동", items: ["문화산업이 욕망을 주입", "주입된 욕망을 충족", "'내가 골랐다'고 느낌", "저항의식에서 도피 → 수동적·무비판적 대중"] },
+        { t: "points", title: "「On Popular Music」 대중음악의 특징", items: [["규격화", "겉은 변해도 실은 같은 반복"], ["수동적 청취", "'진정한 문화'를 위한 에너지 고갈"], ["사회적 유대", "함께 듣는 기능"]] }],
+    hook: "아도르노 + 호르크하이머 = 『계몽의 변증법』 · 대중음악 3특징 = 규·수·사", trap: "'내가 합리적으로 선택했다'고 본 것 → X (아도르노는 반대)" },
+  5: { one: "1980년대 전두환 정부가 군사 독재에 대한 반발을 누르려고 쓴 정책들.",
+    v: [{ t: "formula", p: ["1980년대", "+", "전두환 정부", "+", "반발 억제", "=", "3S 정책"] }],
+    hook: "", trap: "연대(1990년대)나 정부를 바꾼 OX 주의" },
+  6: { one: "공장이 생기고 도시로 모이면서 '일하는 시간'과 '노는 시간'이 나뉘었다 → 그 노는 시간에 대중문화가 생겼다.",
+    v: [{ t: "flow", title: "대중문화가 생긴 순서", items: ["18세기 영국 산업혁명 (증기기관·공장)", "분업화 · 대량생산", "시민계급 탄생 · 일과 주거 분리 · 여가↑ 임금↑", "1850년대 유럽·미국 중산층 → 대중문화 자리잡음", "2차 세계대전 이후 미국 중심 확산"] }],
+    hook: "산업화·도시화 → 여가 → 대중문화", trap: "주거와 영업장이 한 건물 = 산업혁명 '이전' 중세 도시 / 확산 중심은 일본 X, 미국 O" },
+  7: { one: "사람이 가진 '힘'은 돈만이 아니다. 부르디외는 4가지 자본으로 나눴다.",
+    v: [{ t: "table", head: ["자본", "한마디", "예 (강의)", "<더 글로리> 장면"], rows: [["경제자본", "물질", "토지 · 자산 · 소유물", "'겁나 비싼' 집, 광고비, 디올"], ["문화자본", "취향", "취향 · 학력 · 교육", "예술작품을 보는 눈"], ["사회자본", "인맥", "인맥 · 학맥 · 지연 · 혈연", "박연진과의 관계, 골프장 회원권"], ["상징자본", "명성", "명성 · 명예 · 인정 (세 자본이 승인된 형식)", "월 220 받지만 기상캐스터"]] }],
+    hook: "경·문·사·상 = 물·취·인·명 (물질·취향·인맥·명성)", trap: "자본끼리는 서로 전환 '될 수 있다' (예: 인맥으로 학위 수익 극대화)" },
+  8: { one: "자라온 환경·교육·계급 속에서 몸에 밴 성향과 취향.",
+    v: [{ t: "formula", p: ["사회적 위치 · 교육환경 · 계급", "→", "후천적으로 체득", "=", "아비투스"] },
+        { t: "points", title: "그래서", items: [["고급/하위 구분", "문화적 자의성의 산물 (기준이 타당하지 않음)"], ["우열 없음", "고급문화라서 우위, 하위문화라서 열등한 것이 아니다"]] }],
+    hook: "아비투스 = '몸에 밴' 계급적 취향", trap: "선천적 → X / 후천적 → O" },
+  9: { one: "\"나의 문화적 취향이 곧 내가 속한 계급을 말해준다.\"",
+    v: [{ t: "formula", p: ["문화적 취향", "=", "사회적 지위(계급)"] },
+        { t: "table", head: ["취향 유형", "대표 음악 (설문)"], rows: [["정통적 취향", "바흐 피아노 평균율"], ["중간층 취향", "거쉰 랩소디 인 블루"], ["대중적 취향", "슈트라우스 푸른 도나우강"]] }],
+    hook: "구별짓기 = 취향으로 계급을 '구별'하고 유지한다", trap: "취향은 자연 발생 X → 사회구조적 획득 O" },
+  10: { one: "요즘 상류층은 고급예술만 고집하지 않고 대중적인 것까지 두루 즐긴다.",
+    v: [{ t: "table", head: ["", "동형성 가설", "옴니보어-유니보어 가설"], rows: [["상류층의 모습", "고급만 즐김 (고상한 배척자)", "고급 + 저급 모두 포괄 (포괄적 감상자)"], ["핵심", "상층=고급, 하층=저급", "모든 것을 감상할 수 있는 개방성"], ["학자", "", "Peterson(1992), Peterson & Kern(1996)"]] }],
+    hook: "옴니보어 = 무엇이든 받아들이는 '포괄적 감상자'", trap: "두 가설은 서로 '대비'된다 (같은 주장 X)" },
+  11: { one: "한류 = 한국 대중문화가 해외로 퍼지고 소비되는 '현상' (콘텐츠 자체가 아님).",
+    v: [{ t: "formula", p: ["한(한국)", "+", "流(~식·~스타일, 일본식 용어)", "=", "한류"] },
+        { t: "flow", title: "이름이 생긴 과정", items: ["1997년경 중화권에서 한국 드라마·가요 인기", "중국 '인민일보' — \"한풍이 지나간 후\"", "'하일한류' · '일진한류'라는 표현", "1999 문화관광부 <Song from Korea> 음반"] },
+        { t: "points", title: "'流'의 다른 예", items: [["홍콩류(항류)", "1980년대 홍콩 영화 유행"], ["일류", "1990년대 일본 자국 문화"]] }],
+    hook: "중화권 → 인민일보 → 하일·일진 → 1999 음반", trap: "북미에서 시작 → X / 콘텐츠 자체 → X" },
+  12: { one: "아시아 사람들이 '우리끼리는 통한다'고 느끼는 가치·정서·사회적 경험.",
+    v: [{ t: "points", title: "한류가 아시아에서 먼저 뜬 이유 = 초기 키워드 3개", items: [["문화적 근접성", "비슷한 문화를 더 좋아한다"], ["아시안성", "아시아가 공유한다고 느끼는 가치·정서·경험"], ["문화할인율", "문화가 가까우면 덜 깎인다"]] }],
+    hook: "초기 3키워드 = 근·아·할", trap: "초국가적 팬덤은 초기 키워드가 아니다" },
+  13: { one: "사람은 자기 문화와 비슷한 문화를 더 좋아한다 (Straubhaar, 1991).",
+    v: [{ t: "points", title: "근접성을 만드는 요인", items: [["지리", "가까이 있는 나라"], ["언어", "같은 언어 (예: 한자문화권)"], ["가치", "같은 문화적·정신적 가치"]] },
+        { t: "split", left: { title: "의의", items: ["동아시아권 안의 한류를 이해하는 데 도움"] }, right: { title: "한계", items: ["개념 자체가 모호", "한류의 복잡성을 간과", "전통문화 영향은 일부일 뿐", "한류2.0·3.0의 지리적 확장은 설명 못 함"] } }],
+    hook: "요인 = 지·언·가", trap: "한류2.0·3.0까지 잘 설명한다 → X" },
+  14: { one: "다른 나라로 간 문화상품이 '이질감' 때문에 덜 먹히는 정도.",
+    v: [{ t: "table", head: ["문화권 거리", "문화할인율", "결과"], rows: [["가깝다", "낮다", "이해 쉬움 → 잘 통함 (동아시아의 한류)"], ["멀다", "높다", "이질감 → 호응도 떨어짐"]] }],
+    hook: "할인 = 이해도가 '깎이는' 정도. 가까우면 덜 깎인다", trap: "가까울수록 할인율이 높다 → X" },
+  15: { one: "지구 전체가 하나의 단위로 묶이는 것 — 하지만 초기 한류는 아시아 안에서만 돌았다.",
+    v: [{ t: "table", head: ["", "글로벌라이제이션", "국제화"], rows: [["뜻", "세계가 단일 공동체로 확산", "한 나라가 여러 나라와 교류"], ["강조점", "상호의존성", "두 나라 이상이면 성립"]] },
+        { t: "flow", title: "한류에 적용하면", items: ["초기 한류는 동→서가 아니라 동→동", "글로벌라이제이션으로 설명하기 어려움", "글로컬라이제이션 · 혼종성으로 대체"] }],
+    hook: "Levitt(1983) 'The Globalization of Markets'", trap: "글로벌라이제이션 = 국제화 → X" },
+  16: { one: "세계적인 것을 지역에 맞추고, 지역적인 것을 세계로 내보내는 것.",
+    v: [{ t: "formula", p: ["globalization", "+", "localization", "=", "glocalization"] },
+        { t: "table", head: ["나라", "맥도날드 현지화 메뉴"], rows: [["한국", "불고기버거"], ["인도", "치킨마하라자맥"], ["터키", "맥타코케밥"], ["캐나다", "맥랍스터"]] }],
+    hook: "1980년대 마케팅론 → 1990년대 초 사회문화 용어", trap: "메뉴-나라 짝 바꾸기 주의" },
+  17: { one: "문화는 순수하게 남지 않고 섞이며 새로 만들어진다.",
+    v: [{ t: "formula", p: ["글로벌 요소", "+", "로컬 요소", "→", "부딪히고 협상", "→", "새로운 문화"] },
+        { t: "split", left: { title: "시간적 혼종", items: ["전통 + 근대"] }, right: { title: "공간적 혼종", items: ["서구 + 비서구"] } },
+        { t: "points", title: "학자", items: [["호미 바바", "후기식민주의 · 순수한 전통/독자적 자국 문화는 없다"], ["한네르츠", "\"인류의 역사 자체가 혼종화의 과정\""]] }],
+    hook: "혼종성 = 섞여서 '새로' 생긴다 (그냥 합쳐져 사라지는 것 X)", trap: "원조가 어디냐가 중요 → X / 우리 경험·정서를 담는 것 → O" },
+  18: { one: "어디서 왔는지 하나로 딱 말할 수 없을 만큼 국경을 넘나드는 것 (Watson, 2006).",
+    v: [{ t: "points", title: "K-POP의 초국가성", items: [["곡", "해외 작곡가를 동반한 글로벌하고 트렌디한 음악"], ["판", "전략적인 글로벌 유통 및 마케팅"], ["팬", "놀이·팬 문화 기반의 초국가적 팬덤"]] }],
+    hook: "K-POP 초국가성 = 곡·판·팬", trap: "기원이 하나로 추적된다 → X" },
+  19: { one: "글로벌 시대에도 콘텐츠 속 '한국다움'은 다섯 갈래로 나타난다.",
+    v: [{ t: "points", title: "한국적 콘텐츠의 한국성", items: [["전통", "시각적 미학과 전통의 재해석 (BTS <Idol>: 호랑이·북청사자놀음·봉산탈춤, <킹덤>)"], ["발전과정", "집단주의와 개인의 갈등, '우리' vs '나' (<기생충>, <오징어게임>)"], ["로맨스", "결함 있는 완벽 남주 + 밝고 꿋꿋한 여주 (변주: <사랑의 불시착>, <눈물의 여왕> 역할 전환)"], ["정서", "한(恨)과 정(情)"], ["신파", "감정 과잉의 눈물 (<부산행>, <7번방의 선물>)"]] }],
+    hook: "전·발·로·정·신", trap: "모노노아와레는 일본 정서 (한국성 요소 X)" },
+  20: { one: "한은 그냥 슬픔·분노가 아니라 여러 감정이 묵어서 생긴 '응어리'다.",
+    v: [{ t: "table", head: ["정서", "핵심", "범위"], rows: [["한 (한국)", "분노·억울함·서러움이 뒤섞여 묵은 감정, 체념 + 그래도 살아가는 생명력", "집단·공동체"], ["모노노아와레 (일본)", "사물·순간의 덧없음에 대한 애잔함 (미학적)", "자연·아름다움"], ["원 怨 (중국)", "억울함과 분노, 원한·복수심", "개인 간"], ["Sadness (서구)", "사랑하는 사람의 죽음·실패 같은 상실", "개인"]] }],
+    hook: "한 = 응어리 (원한·복수심과 다르다)", trap: "한 = 원망·원한·복수심 → X" },
+  21: { one: "오래 함께하며 쌓이는 끈끈하고 따뜻한 유대 — 미운 정, 고운 정.",
+    v: [{ t: "table", head: ["", "정 (한국)", "사랑 (서구)"], rows: [["범위", "넓고 느슨함: 이웃 · 동료 · 반려동물 · 사물", "특정 관계: 낭만적 사랑 · 가족애"], ["성격", "애정·연민·동정·애착·유대가 오랜 시간 쌓임", "개인 간 강렬한 감정, 선택적 유대"]] }],
+    hook: "정은 '쌓이는' 것", trap: "" },
+  22: { one: "보편적 가치를 핑계로 논리보다 눈물을 앞세우는 감정 과잉의 연출.",
+    v: [{ t: "formula", p: ["신파(新派)", "=", "1867 일본, 서양식 연극", "↔", "구파", "=", "가부키극"] },
+        { t: "points", title: "특징", items: [["감정 과잉", "과잉된 눈물과 탄식"], ["개연성 무시", "논리와 개연성을 무시하는 전개"], ["감정 강요", "관객에게 감정을 강요하는 연출"]] }],
+    hook: "신파 ↔ 구파 (새 것 ↔ 옛 것)", trap: "논리·개연성 중시, 감정 절제 → X" },
+  23: { one: "한류의 출발은 드라마였다 — 가족드라마에서 멜로드라마로.",
+    v: [{ t: "flow", title: "한류 1.0 드라마", items: ["1997 중국 CCTV <사랑이 뭐길래> (국내 60%) — 당시엔 '일시적'이라 전망", "2000 <가을동화>", "2002 <겨울연가>", "2003 <대장금>"] },
+        { t: "points", title: "멜로드라마의 특징", items: [["통속극", "감정 진폭이 큰, 보편 정서에 호소"], ["권선징악", "선과 악의 갈등"], ["극단적 상황", "불치병 · 출생의 비밀 · 복수"], ["가족서사", "한국 가족서사와 결합된 정서"]] }],
+    hook: "사뭐 → 가을 → 겨울 → 장금", trap: "장르물·사회 메시지는 2020년 전후 OTT 시대 특징" },
+  24: { one: "조선 요리사 장금 이야기로 한식과 의학을 세계에 알린 사극.",
+    v: [{ t: "points", title: "숫자로 기억", items: [["90여 개국", "방영 국가"], ["50%대", "홍콩 TVB 시청률"], ["90%", "이란 IRIB 시청률"], ["이후", "한국 음식점 · 한복 체험 수요 증가"]] }],
+    hook: "이란 90% = 90여 개국 — 둘 다 90", trap: "" },
+  25: { one: "옛 가족 가치 + 요즘식 연애 = 동아시아가 '우리 이야기'로 느꼈다.",
+    v: [{ t: "split", left: { title: "(1) 유교적 가치", items: ["가족 중심 · 효(孝)", "부모-자식 위계 · 집단 우선", "부모의 반대, 가족을 위한 희생", "결혼은 집단의 문제"] }, right: { title: "(2) 근대적 사랑", items: ["개인의 선택", "자유로운 연애", "감정 중심의 관계", "신분·계급을 넘는 사랑"] } }],
+    hook: "문화적 근접성 = 유교 + 근대 사랑", trap: "자유 연애를 '유교적 가치'에 넣으면 X" },
+  26: { one: "텐트를 받치는 큰 기둥처럼, 제작사의 성패를 좌우하는 대작 (국내 제작비 100억 원 이상).",
+    v: [{ t: "flow", title: "왜 늘어났나", items: ["OTT 확대로 경쟁 심화", "소비자 눈높이 상승", "제작비 상승 (인건비 · 사전제작 · 주52시간)", "외국자본 의존도↑ 가능성"] }],
+    hook: "텐트폴 = 100억+ 대작", trap: "외국자본 의존도를 '낮춘다' → X" },
+  27: { one: "OTT는 '언제, 어디서, 무엇을 볼지'를 시청자에게 넘겼다.",
+    v: [{ t: "table", head: ["", "과거", "OTT 시대"], rows: [["경로", "방송사 → 케이블 → 셋탑박스 → TV", "방송사 → 인터넷 → 기기"], ["시청", "정해진 편성 시간 · 채널 중심", "원하는 시간(on-demand) · 콘텐츠 선택"], ["유통", "국가별 방송사 계약", "플랫폼 동시 공개 (<오징어게임> 190개국)"], ["태도", "수동", "능동"]] },
+        { t: "points", title: "새로운 소비양식", items: [["동시 배포", "장소성·시간성"], ["시청 방식", "on-demand"], ["알고리즘 추천", "다국어 자막·더빙 (<태양의 후예> 멕시코)"], ["팬덤·SNS", "팬 자막(Viki), 밈"], ["구독경제", ""], ["빨리감기", ""], ["빈지뷰잉", ""]] }],
+    hook: "유통 = 국가 → 플랫폼", trap: "'플랫폼 → 국가'로 바뀌었다 → X" },
+  28: { one: "물건을 사서 '갖는' 대신, 일정 기간 '쓸 권리'를 정기적으로 사는 방식.",
+    v: [{ t: "table", head: ["", "전통 소비", "구독경제"], rows: [["소유", "소비자가 소유권을 가짐", "일정 기간 이용할 권리"], ["지불", "한 번에 지출 (1회성)", "기간마다 일정 금액 (정기성)"], ["선택", "한 번 사면 바꿀 수 없음", "자유롭게 수시로 선택 / 전문가 추천"], ["관계", "단발성", "지속적"]] }],
+    hook: "구독 = 빌려 쓰기 + 정기 결제", trap: "구독경제에서 소유권을 가진다 → X" },
+  29: { one: "작품을 '감상'하던 시대에서 콘텐츠를 '소비'하는 시대로.",
+    v: [{ t: "points", title: "빨리 감기로 보는 이유", items: [["작품이 많음", "유행을 따라가려고"], ["가성비", "시간 대비 효율 (타임 퍼포먼스)"], ["빨리 봐도 되는 콘텐츠", "웹툰·웹소설 기반 영상 증가 → 친절한 설명 증가"]] },
+        { t: "formula", p: ["binge (폭음·폭식)", "+", "viewing", "=", "빈지뷰잉 (몰아보기)"] },
+        { t: "points", title: "숫자", items: [["34.4%", "빨리 감기 경험"], ["54.5%", "20대 남성"], ["2012년", "넷플릭스 포스트플레이(자동 재생) 추가"]] }],
+    hook: "'보고 싶다'가 아니라 '알고 싶다'", trap: "" },
+  30: { one: "K드라마가 세계에서 통하는 이유 3가지.",
+    v: [{ t: "points", title: "인기 요인", items: [["여성 중심 서사", "존 피스크: 남성장르(딱딱한 현실) / 여성장르(부드러운 허구). 로맨틱 판타지 + 강인한 여성 주인공"], ["중산층 이데올로기", "\"할리우드 주인공이 평범하다면 한국 주인공은 가난하다\" — 양극화 비판"], ["혼종성", "익숙한 장르 코드 + 한국식 신파 (좀비물에도 가족·휴머니즘)"]] }],
+    hook: "여·중·혼", trap: "한국 좀비물 = 이성적 인간 vs 감정적 인간 (비이성적 좀비만 다루지 않음)" },
+  31: { one: "번역은 말만 옮기는 게 아니라 그 나라 사람이 '느끼게' 다시 만드는 것.",
+    v: [{ t: "table", head: ["지역", "<폭싹 속았수다> 제목", "무엇을 살렸나"], rows: [["원제", "폭싹 속았수다", "제주방언 '정말 수고 많으셨습니다'"], ["영미권", "When Life Gives You Tangerines", "관용구 'When life gives you lemons…'"], ["대만", "苦盡柑來遇見你", "고진감래의 달 감(甘) → 귤 감(柑)"], ["일본", "おつかれさま", "'수고하셨습니다' 직역"]] }],
+    hook: "문화번역 = 해석 + 협상 → 새로 구성", trap: "" },
+  32: { one: "누구나 아는 이야기(학교폭력·복수) 위에 한국만의 디테일을 얹었다.",
+    v: [{ t: "split", left: { title: "보편적 요소", items: ["학교폭력의 심각성", "복수극과 카타르시스 (<햄릿>)"] }, right: { title: "로컬(한국적) 요소", items: ["경제력에 따른 가해자·피해자", "방관하는 교사와 학교", "가해자들의 직업", "종교와 신", "복수의 방식 (눈에는 눈)", "엄마의 유형과 가족주의"] } }],
+    hook: "보편 2 + 로컬 6", trap: "복수극과 카타르시스는 '보편적' 요소" },
+  33: { one: "'참교육'이라는 말의 뜻이 바뀌어 쓰였다(전유).",
+    v: [{ t: "split", left: { title: "원래 뜻", items: ["참된 교육", "교육 운동 진영의 슬로건"] }, right: { title: "온라인 밈", items: ["응징 · 정의구현", "잘못한 사람을 혼쭐냄"] } },
+        { t: "formula", p: ["액션 · 사이다극", "+", "비질란테 (대신 처벌하는 해결사)", "=", "장르 혼종"] }],
+    hook: "영문 제목 'Teach you a Lesson'", trap: "참된 교육의 뜻'만' 담았다 → X" },
+  34: { one: "리얼리티 쇼 = 실제 인물의 행동·감정·관계·경쟁을 보여주는 예능. 6가지 유형.",
+    v: [{ t: "table", head: ["유형", "핵심", "예"], rows: [["서바이벌/경연", "경쟁 · 평가 · 탈락", "쇼미더머니 · 흑백요리사 · 더지니어스"], ["일상 관찰", "일상·직업·가족 관찰", "나 혼자 산다 · 슈퍼맨이 돌아왔다"], ["연애/관계", "호감 · 설렘 · 선택", "하트시그널 · 나는솔로 · 테라스하우스"], ["리얼 버라이어티", "캐릭터·관계, 즉흥 재미", "런닝맨 · 무한도전 · 1박2일"], ["여행/어드벤처", "문화탐방 · 극한도전", "꽃보다 할배 · 지구마불 세계여행"], ["소셜실험", "인위적 상황에서 반응 관찰", "Big Brother · 소사이어티게임 · 머니게임"]] }],
+    hook: "서·일·연·리·여·소", trap: "<소사이어티게임>은 연애형 X → 소셜실험형" },
+  35: { one: "<아메리칸 아이돌> 같은 오디션 포맷에 한국식 요소를 섞었다.",
+    v: [{ t: "split", left: { title: "글로벌 요소", items: ["젠더·나이·인종·외모와 무관한 공정한 경쟁", "시청자 투표로 참여 최대화"] }, right: { title: "로컬(한국적) 요소", items: ["디아스포라 요소 (해외 오디션, 백청강·존박·배수정)", "하향식 교육 시스템", "연장자를 존중하는 멘토 시스템"] } }],
+    hook: "디아스포라 = 본토를 떠나 타국에서 사는 공동체", trap: "시청자 투표는 '글로벌' 요소" },
+  36: { one: "예능이 해외로 가는 길은 3가지다.",
+    v: [{ t: "table", head: ["유형", "무엇이 이동", "해외 시청자가 보는 것"], rows: [["완성 프로그램 유통", "한국에서 만든 영상", "한국 출연자 · 한국어 프로그램"], ["포맷 수출", "규칙 · 구성 · 제작 노하우", "현지 출연자 · 현지 언어 (예: The Masked Singer)"], ["글로벌 플랫폼 유통", "여러 시장으로 가는 유통 경로", "자막 · 더빙된 한국 프로그램"]] }],
+    hook: "완성품 · 설계도(포맷) · 플랫폼", trap: "포맷 수출인데 한국 출연자·한국어 → X" },
+  37: { one: "누구나 아는 구조에 한국 사회의 이야기를 담아 세계에서 통했다.",
+    v: [{ t: "split", left: { title: "<흑백요리사> 보편 구조", items: ["유명 요리사 vs 도전자", "제한된 조건에서 요리", "평가 · 탈락 · 역전", "실력을 인정받으려는 이야기"] }, right: { title: "<흑백요리사> 한국 로컬성", items: ["한국 외식업과 요리사의 경력", "식재료와 조리 방식", "음식에 담긴 기억과 가치", "'흑수저·백수저'라는 표현"] } },
+        { t: "points", title: "<피지컬 100>", items: [["200대 카메라", "표정·바디랭귀지 포착 (고품질 현지화)"], ["그리스·로마", "건강한 육체에 건강한 정신이 깃든다"]] }],
+    hook: "흑·백수저 = 한국 사회의 말", trap: "평가·탈락·역전은 '보편' 구조" },
+  38: { one: "연애 리얼리티는 나라마다 비슷한 틀에, 각국의 결혼관·젠더 관념이 섞인다.",
+    v: [{ t: "points", title: "글로벌 공통 요소", items: [["일반인 남녀", ""], ["정해진 공간·기간 관찰", ""], ["패널·성우 나레이션", "시청자 입장 대변"], ["매력적인 남녀", ""], ["게임·미션", ""], ["최종 결정", "마지막에 이루어짐"]] }],
+    hook: "", trap: "출연자 전원 연예인 → X" },
+  39: { one: "남의 작품을 대신 만들던 시대(OEM)에서 우리 캐릭터를 만드는 시대로.",
+    v: [{ t: "flow", title: "한국 애니메이션 연표", items: ["1936 고유 제작 시작", "1967 <홍길동>", "1976 <로보트 태권브이>", "1987 <아기공룡 둘리>", "1970~90년대 OEM: 기술↑ 기획력↓", "2003 <뽀로로> 독자 기획", "2011 <마당을 나온 암탉> 장편 가능성"] },
+        { t: "formula", p: ["업체 수", "163 (2002)", "→", "341 (2012)", "→", "490 (2020)"] }],
+    hook: "홍·태·둘 → OEM → 뽀로로", trap: "<뽀로로>는 1987 X → 2003 O" },
+  40: { one: "하나의 원천(캐릭터·작품)을 여러 매체·상품으로 펼친다.",
+    v: [{ t: "formula", p: ["One source", "→", "Multi-use", "=", "OSMU"] },
+        { t: "points", title: "한국 애니메이션 성공 요인", items: [["디지털 테크놀로지", ""], ["숙련된 인력", ""], ["OSMU 파생상품", ""]] }],
+    hook: "<아기상어>: 북미 동요 편곡, 2015 핑크퐁, 2021 유튜브 조회수 1위", trap: "원작 만화의 인기는 성공 요인 X (예전 방식)" },
+  41: { one: "뽀로로는 '원작 만화'가 아니라 '캐릭터'부터 만들었다.",
+    v: [{ t: "points", title: "인기요인 5", items: [["서구식 캐릭터 개발", "헬로키티·미키마우스처럼 캐릭터 기반"], ["미취학 대상", "7세 미만, 10분 안팎 (10대는 사교육으로 이탈)"], ["꿈꾸는 펭귄", "날고 싶은 파일럿 펭귄"], ["동물 캐릭터들", "기억하기 쉬운 이름"], ["반복·느린 포맷", "교육보다 즐거움"]] },
+        { t: "points", title: "숫자", items: [["2003.11", "EBS 방영"], ["47%", "프랑스 TF1 최고시청률"], ["150개국", "2011년 방영"]] }],
+    hook: "캐·미·펭·동·반", trap: "10대가 주 타깃 → X" },
+  42: { one: "어느 나라 아이가 봐도 '자기 이야기'로 느끼도록 한국색을 덜어냈다.",
+    v: [{ t: "points", title: "문화적 중립성 전략", items: [["고글·헬멧", "눈·머리카락 색을 드러내지 않음"], ["돼지 캐릭터 제외", ""], ["중성적 색상", "파랑 · 핑크 · 화이트"], ["보편적 인사", "글로벌하게 보편화된 인사"], ["권위체계 X", "유교사상·권위체계를 표현하지 않음"]] },
+        { t: "points", title: "혼종성의 예", items: [["식사", "한국 음식 대신 케이크 · 쿠키"]] }],
+    hook: "유아 대상 = 언어 장벽↓ · 문화 특수성↓ · IP 비즈니스", trap: "한복·한식을 적극 등장 → X" },
+  43: { one: "말과 표현에서 편견을 빼자는 주장 → 애니메이션의 다양성 문제로 이어진다.",
+    v: [{ t: "points", title: "6강에서 다룬 다양성", items: [["외모", "외모 스테레오타입·외모지상주의 (캐치티니핑, 브레드이발소)"], ["노인", "콩순이 <느려도 괜찮아> vs 블루이의 자연스러운 어르신 묘사"], ["장애", "<페파피그> 시즌6 맨디 — 다양한 장애를 대표하도록 모호하게 설정"]] }],
+    hook: "정치적 올바름 = 인종·민족·언어·종교·성차별 편견 빼기", trap: "" },
+};
+
 // 문제은행 항목 → 개념(요약·카드·빈칸·고정 문제)
 function buildBankConcepts(items) {
   return items.map((it) => {
@@ -1587,6 +1778,7 @@ function viewNew() {
     </div>`;
 }
 
+const startTab = (m) => (m.presetId === HR_PRESET.id ? "easy" : defaultTab(m.settings));
 function defaultTab(s) {
   const main = [...s.types].sort((a, b) => (s.weights[b] || 0) - (s.weights[a] || 0))[0];
   return { mcq: "cards", multi: "cards", ox: "cards", short: "cloze", fill: "cloze", brief: "summary", essay: "summary" }[main] || "summary";
@@ -1612,13 +1804,13 @@ function viewSet() {
   if (S.meta === false) return `<div class="card">학습 세트를 찾을 수 없습니다. <button class="btn sec" data-act="home">홈으로</button></div>`;
   const m = S.meta;
   const analyzing = m.chunksDone < m.chunksTotal;
-  const tab = S.tab || defaultTab(m.settings);
+  const tab = S.tab || startTab(m);
   const list = (S.onlyEss ? S.concepts.filter((c) => c.tier === "essential") : S.concepts).filter((c) => !conceptSkipped(c));
   const warnings = [...m.materials.flatMap((x) => (x.warnings || []).map((w) => `${x.lecture}: ${w}`)), ...(m.notes || [])];
   const essCount = S.concepts.filter((c) => c.tier === "essential").length;
   let body = "";
   if (S.concepts.length) {
-    body = tab === "summary" ? viewSummary(list) : tab === "cards" ? viewCards(list) : tab === "cloze" ? viewCloze(list) : tab === "groups" ? viewGroups() : tab === "drill" ? viewDrill(list) : viewQuiz("essential");
+    body = tab === "summary" ? viewSummary(list) : tab === "cards" ? viewCards(list) : tab === "cloze" ? viewCloze(list) : tab === "groups" ? viewGroups() : tab === "easy" ? viewEasy(list) : tab === "drill" ? viewDrill(list) : viewQuiz("essential");
   }
   return `${setHeader(`<button class="btn sec" data-act="to-review">복습 화면</button>`)}
     ${errBox()}
@@ -1633,7 +1825,7 @@ function viewSet() {
       </div></details>` : ""}
     ${warnings.length ? `<details class="notice"><summary>자료 관련 안내 ${warnings.length}건</summary><ul class="small" style="margin-top:6px">${warnings.map((w) => `<li>${esc(w)}</li>`).join("")}</ul></details>` : ""}
     ${S.concepts.length ? `
-      <div class="tabs" role="tablist">${[["summary", "핵심 요약"], ...(m.presetId === KS_PRESET.id ? [["groups", "모아보기"]] : []), ["cards", "암기 카드"], ["drill", "빈칸 훈련"], ["cloze", "빈칸 암기"], ["quiz", "실전 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${tab === id}" data-act="tab" data-tab="${id}">${l}</button>`).join("")}</div>
+      <div class="tabs" role="tablist">${[...(m.presetId === HR_PRESET.id ? [["easy", "쉽게 이해"]] : []), ["summary", "핵심 요약"], ...(m.presetId === KS_PRESET.id ? [["groups", "모아보기"]] : []), ["cards", "암기 카드"], ["drill", "빈칸 훈련"], ["cloze", "빈칸 암기"], ["quiz", "실전 테스트"]].map(([id, l]) => `<button class="tab" role="tab" aria-selected="${tab === id}" data-act="tab" data-tab="${id}">${l}</button>`).join("")}</div>
       ${(m.skip || []).length ? `<p class="tiny muted">다시 안 보기로 뺀 항목 ${(m.skip || []).length}개는 학습에서 빠져 있습니다. <button class="btn ghost small" data-act="go-skip">관리·되돌리기</button></p>` : ""}
       ${tab !== "quiz" ? `<label class="row small muted"><input type="checkbox" id="only-ess" data-act="only-ess" ${S.onlyEss ? "checked" : ""}> ${tab === "groups" ? "교수님 표시 문항만 보기" : "필수 개념만 보기"} (${essCount}/${S.concepts.length})</label>` : ""}
       ${body}` : ""}`;
@@ -1831,6 +2023,37 @@ function viewDrill(list) {
     <button class="btn ghost" data-act="drill-quit">그만하기</button>`;
 }
 
+// ───────── 쉽게 이해 (한류: 문장 대신 구조·그림으로) ─────────
+function easyBlock(b) {
+  if (b.t === "formula") return `<div class="formula">${b.p.map((x) => (/^[+=→←↔]$/.test(x) ? `<span class="op">${esc(x)}</span>` : `<span class="term">${esc(x)}</span>`)).join("")}</div>`;
+  if (b.t === "flow") return `<div class="eblock">${b.title ? `<p class="label">${esc(b.title)}</p>` : ""}<ol class="flow">${b.items.map((x) => `<li>${esc(x)}</li>`).join("")}</ol></div>`;
+  if (b.t === "points") return `<div class="eblock">${b.title ? `<p class="label">${esc(b.title)}</p>` : ""}<div class="pts">${b.items.map(([k, d], i) => `<div class="pt"><span class="pn mono">${i + 1}</span><div><b>${esc(k)}</b>${d ? `<p class="small muted">${esc(d)}</p>` : ""}</div></div>`).join("")}</div></div>`;
+  if (b.t === "table") return `<div class="tblwrap"><table class="etbl"><thead><tr>${b.head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${b.rows.map((r) => `<tr>${r.map((c, i) => (i === 0 ? `<th scope="row">${esc(c)}</th>` : `<td>${esc(c)}</td>`)).join("")}</tr>`).join("")}</tbody></table></div>`;
+  if (b.t === "split") return `<div class="esplit">${[b.left, b.right].map((side, i) => `<div class="side s${i}"><p class="label">${esc(side.title)}</p><ul>${side.items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div>`;
+  return "";
+}
+// 핵심 문장의 키워드를 가려 두고, 눌러서 하나씩 확인
+const tapCloze = (cloze) => esc(cloze).replace(/\[\[([^\]]+)\]\]/g, (_, w) => `<button class="tapblank" data-act="reveal" aria-label="가린 키워드 보기"><span class="hid">${"＿".repeat(Math.min(6, Math.max(2, w.length)))}</span><span class="ans">${w}</span></button>`);
+function viewEasy(list) {
+  const lecs = ["2강", "3강", "4강", "5강", "6강"], cur = S.easyLec || "all";
+  const items = list.filter((c) => HR_EASY[+c.id.slice(1)] && (cur === "all" || (c.source.lecture || "").startsWith(cur)));
+  const nav = `<div class="row small"><span class="label">강의</span>${[["all", "전체"], ...lecs.map((l) => [l, l])].map(([v, l]) => `<button class="chip" data-act="easy-lec" data-v="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
+  if (!items.length) return nav + `<div class="card muted">표시할 개념이 없습니다.</div>`;
+  return nav + `<p class="tiny muted">긴 문장 대신 한 줄 설명 → 구조 그림 → 외우는 요령 → 시험 함정 순서로 보세요. 마지막 '바로 확인'에서 가린 키워드를 눌러 스스로 확인합니다.</p>` + items.map((c) => {
+    const e = HR_EASY[+c.id.slice(1)];
+    return `<article class="card easy">
+      ${conceptHead(c)}
+      <p class="one">${esc(e.one)}</p>
+      ${e.v.map(easyBlock).join("")}
+      ${e.hook ? `<p class="hook"><span class="label">외우는 요령</span> ${esc(e.hook)}</p>` : ""}
+      ${e.trap ? `<p class="trap"><span class="label">시험 함정</span> ${esc(e.trap)}</p>` : ""}
+      <div class="check"><div class="between"><p class="label">바로 확인 · 가린 키워드를 눌러 보세요</p><button class="btn ghost small" data-act="easy-cover">위 내용 가리기</button></div><p>${tapCloze(c.cloze)}</p></div>
+      <div class="between"><span class="tiny muted">출처 ${esc(src(c))}</span><button class="btn ghost small" data-act="skip-concept" data-id="${c.id}">다시 공부 안 함</button></div>
+      ${rateRow(c)}
+    </article>`;
+  }).join("");
+}
+
 // ───────── 모아보기 (한국학 산책: 인물·책·기관·용어·연도) ─────────
 function viewGroups() {
   return `<p class="tiny muted">준비자료 40문항에서 같은 성격의 암기거리를 묶었습니다. '카드로 외우기'를 누르면 설명을 보고 이름을 떠올리는 카드로 학습합니다.</p>` +
@@ -1868,7 +2091,7 @@ function buildCards(list) {
   return mode === "shuffle" ? shuffle(all) : all;
 }
 function stopAuto() { AUTO.on = false; clearTimeout(AUTO.timer); }
-function cardsVisible() { return S.view === "set" && (S.tab || (S.meta && defaultTab(S.meta.settings))) === "cards" && S.cards; }
+function cardsVisible() { return S.view === "set" && (S.tab || (S.meta && startTab(S.meta))) === "cards" && S.cards; }
 // 한 회차가 끝났을 때: 다음 회차 카드 구성. 남은 카드가 없으면 false
 function nextRound() {
   const k = S.cards;
@@ -2294,6 +2517,9 @@ const ACTIONS = {
   "card-next": () => { S.cards.i++; S.cards.flipped = false; render(); autoStep(); },
   "cards-restart": () => { stopAuto(); S.cards = null; render(); },
   "card-mode": (el) => { S.cardMode = el.dataset.v; S.cards = null; render(); },
+  "easy-lec": (el) => { S.easyLec = el.dataset.v; render(); window.scrollTo(0, 0); },
+  reveal: (el) => { el.classList.toggle("shown"); },
+  "easy-cover": (el) => { const a = el.closest("article"); const on = a.classList.toggle("covered"); el.textContent = on ? "위 내용 다시 보기" : "위 내용 가리기"; },
   "drill-src": (el) => { S.drill.src = el.dataset.v; render(); },
   "drill-count": (el) => { S.drill.count = +el.dataset.v; render(); },
   "drill-order": (el) => { S.drill.order = el.dataset.v; render(); },
