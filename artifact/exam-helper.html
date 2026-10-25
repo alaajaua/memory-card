@@ -162,6 +162,10 @@ textarea.field { resize: vertical; }
 .dinput[data-state="typing"] { border-color: var(--accent); }
 .dinput[data-state="wrong"] { border-color: var(--bad); background: var(--bad-soft); }
 .dinput[data-state="ok"] { border-color: var(--good); background: var(--good-soft); }
+.dkeys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dkeys .btn:only-child { grid-column: 1 / -1; }
+.dkeys .btn { padding: 14px 10px; font-size: 16px; }
+kbd { font-family: var(--mono, monospace); font-size: 12px; border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; margin-left: 6px; opacity: .75; }
 .dans { font-size: 1.25rem; font-weight: 700; color: var(--good); }
 .glist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
 .glist li { padding: 9px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
@@ -2229,7 +2233,7 @@ function startDrill(list) {
 }
 function drillNext() {
   const d = S.drill;
-  d.cur = d.queue.shift() || null; d.mode = "answer"; d.hint = 0; d.value = ""; d.lock = false;
+  d.cur = d.queue.shift() || null; d.mode = "answer"; d.hint = 0; d.value = ""; d.lock = false; d.wrongTry = "";
   if (!d.cur) d.phase = "done"; else d.items[d.cur].shown++;
   render();
 }
@@ -2239,25 +2243,32 @@ function drillState(value) {
   if (it.alts.includes(v)) return "ok";
   return it.alts.some((a) => jamo(a).startsWith(vj)) ? "typing" : "wrong";
 }
+// 실시간 철자 표시(틀리면 빨강, 맞으면 초록) 켜기/끄기 — 이 기기에만 기억
+let DRILL_LIVE = true;
+try { DRILL_LIVE = localStorage.getItem("drill-live") !== "off"; } catch (e) { /* 저장소를 못 쓰면 기본값(켬) */ }
+function setDrillLive(on) {
+  DRILL_LIVE = on;
+  try { localStorage.setItem("drill-live", on ? "on" : "off"); } catch (e) { /* 이번 세션에만 적용 */ }
+}
 function drillLive(el) {
   const d = S.drill;
   if (!d || d.phase !== "run" || d.lock) return;
   d.value = el.value;
   const st = drillState(el.value);
-  el.dataset.state = st;
+  el.dataset.state = DRILL_LIVE || st === "empty" ? st : "typing";
   const msg = $("#drill-msg");
-  if (msg) msg.textContent = st === "wrong" ? "철자가 달라요" : "";
-  if (st === "ok") { d.lock = true; setTimeout(() => { el.blur(); drillSuccess(); }, 180); }
+  if (msg) msg.textContent = DRILL_LIVE && st === "wrong" ? "철자가 달라요" : "";
 }
 function requeue(key, gap) { const q = S.drill.queue; q.splice(Math.min(gap, q.length), 0, key); }
+const missGap = () => 8 + Math.floor(Math.random() * 3); // 틀린 문제는 8~10문제 뒤에 다시
 function drillSuccess() {
   const d = S.drill, it = d.items[d.cur], c = S.concepts.find((x) => x.id === it.cid);
-  if (d.mode === "retype") { requeue(d.cur, 3); return drillNext(); }
+  if (d.mode === "retype") { requeue(d.cur, missGap()); return drillNext(); }
   if (d.hint) return drillMiss();
   it.streak++;
   if (!it.missed && it.shown === 1) d.firstTry++;
   if (!it.missed || it.streak >= 2) { d.done++; if (c) saveProgress(c, applyVerdict(prog(c), "correct")); }
-  else requeue(d.cur, 6);
+  else requeue(d.cur, missGap());
   drillNext();
 }
 function drillMiss() {
@@ -2268,13 +2279,22 @@ function drillMiss() {
   d.mode = "retype"; d.value = ""; d.lock = false;
   render();
 }
+// Enter: 정답이면 초록으로 잠깐 보여준 뒤 다음 문제, 틀리면 정답을 보여주고 따라 쓰기
 function drillSubmit() {
   const d = S.drill;
   if (!d || d.phase !== "run" || d.lock) return;
-  const el = $("#drill-in");
-  const st = drillState(el ? el.value : d.value);
-  if (st === "ok") { d.lock = true; return drillSuccess(); }
-  if (d.mode === "answer" && dnorm(el ? el.value : "")) return drillMiss();
+  const el = $("#drill-in"), val = el ? el.value : d.value;
+  const st = drillState(val), msg = $("#drill-msg");
+  if (st === "ok") {
+    d.lock = true;
+    if (el) { el.dataset.state = "ok"; el.blur(); }
+    if (msg) { msg.style.color = "var(--good)"; msg.textContent = "정답!"; }
+    return setTimeout(drillSuccess, 350);
+  }
+  if (!dnorm(val)) { if (msg) msg.textContent = d.mode === "retype" ? "정답을 똑같이 입력하고 Enter" : "답을 쓰고 Enter, 모르면 → 키"; return; }
+  if (d.mode === "answer") { d.wrongTry = val; return drillMiss(); }
+  if (el) el.dataset.state = "wrong";
+  if (msg) msg.textContent = "정답과 다릅니다. 위 정답을 똑같이 입력하세요";
 }
 function viewDrill(list) {
   S.drill ||= { phase: "setup", src: S.meta.bankMode ? "fill" : "cloze", count: 20, order: "priority" };
@@ -2283,7 +2303,8 @@ function viewDrill(list) {
     const srcs = [...(S.concepts.some((c) => (c.bank || []).some((b) => b.type === "short")) ? [["short", "단답형 (설명 → 용어)"]] : []), ["fill", "빈칸 문제"], ["cloze", "핵심 문장 빈칸"], ...(S.meta.presetId === KS_PRESET.id ? [["group", "모아보기 전체(인물·책·연도…)"], ...KS_GROUPS.map((g) => [`group:${g.id}`, g.title.replace(/ \(.*\)/, "")])] : [])];
     const n = drillItems(list, d.src).length;
     return `<section class="card">
-      <p class="small">말해보카처럼 빈칸을 직접 쓰며 외웁니다. 맞게 쓰면 바로 다음으로 넘어가고, 틀리면 정답을 따라 쓴 뒤 몇 문제 뒤에 다시 나옵니다. 틀렸던 빈칸은 연속 2번 맞혀야 완료됩니다.</p>
+      <p class="small">말해보카처럼 빈칸을 직접 쓰며 외웁니다. 답을 쓰고 <b>Enter</b>로 확인하고, 모르면 <b>→</b> 키로 바로 정답을 봅니다. 틀린 문제는 정답을 따라 쓴 뒤 8~10문제 뒤에 다시 나오고, 연속 2번 맞혀야 완료됩니다.</p>
+      <label class="row small"><input type="checkbox" data-act="drill-live" ${DRILL_LIVE ? "checked" : ""}> 입력하는 동안 철자 표시 (틀리면 빨강 · 맞으면 초록)</label>
       <div><p class="label">훈련할 빈칸</p><div class="row">${srcs.map(([v, l]) => `<button class="chip" data-act="drill-src" data-v="${v}" aria-pressed="${d.src === v}">${esc(l)}</button>`).join("")}</div></div>
       <div><p class="label">한 번에 외울 개수</p><div class="row">${[[10, "10개"], [20, "20개"], [40, "40개"], [0, `전체 ${n}개`]].map(([v, l]) => `<button class="chip" data-act="drill-count" data-v="${v}" aria-pressed="${d.count === v}">${l}</button>`).join("")}</div></div>
       <div><p class="label">순서</p><div class="row">${[["priority", "덜 외운 것부터"], ["shuffle", "무작위"]].map(([v, l]) => `<button class="chip" data-act="drill-order" data-v="${v}" aria-pressed="${d.order === v}">${l}</button>`).join("")}</div></div>
@@ -2306,11 +2327,12 @@ function viewDrill(list) {
   return `<div class="between tiny muted"><span class="mono">완료 ${d.done} / ${d.total}</span><span>남은 문제 ${d.queue.length + 1}${it.missed && it.shown > 1 && d.mode === "answer" ? " · 다시 나온 문제" : ""}</span></div>${meter(pct)}
     <section class="card drill">
       <p class="dprompt">${it.prompt}</p>
-      ${d.mode === "retype" ? `<div class="answerbox"><p class="label">정답 — 따라 써 보세요</p><p class="dans">${esc(main)}</p>${it.answer.includes(" / ") ? `<p class="tiny muted">인정 답: ${esc(it.answer)}</p>` : ""}</div>` : ""}
+      ${d.mode === "retype" ? `<div class="answerbox">${d.wrongTry ? `<p class="small" style="color:var(--bad)">내 답 · ${esc(d.wrongTry)}</p>` : ""}<p class="label">정답 — 따라 쓰고 Enter</p><p class="dans">${esc(main)}</p>${it.answer.includes(" / ") ? `<p class="tiny muted">인정 답: ${esc(it.answer)}</p>` : ""}</div>` : ""}
       <input id="drill-in" class="field dinput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${d.mode === "retype" ? "정답을 똑같이 입력" : "빈칸에 들어갈 말을 입력"}" data-state="empty">
       <p id="drill-msg" class="tiny" style="color:var(--bad);min-height:1.2em"></p>
       ${hint}
-      ${d.mode === "answer" ? `<div class="row"><button class="btn sec" data-act="drill-hint">힌트 (한 글자)</button><button class="btn sec" data-act="drill-giveup">모르겠어요</button><button class="btn ghost" data-act="drill-skip" title="이 빈칸이 나온 문장과 그 변형 문제를 모두 빼기">이미 알아요 · 다시 안 보기</button><button class="btn" style="margin-left:auto" data-act="drill-submit">확인</button></div>` : ""}
+      ${d.mode === "answer" ? `<div class="dkeys"><button class="btn sec" data-act="drill-giveup">정답 보기 <kbd>→</kbd></button><button class="btn" data-act="drill-submit">확인 <kbd>Enter</kbd></button></div>
+      <div class="row small"><button class="btn ghost small" data-act="drill-hint">힌트 (한 글자)</button><button class="btn ghost small" data-act="drill-skip" title="이 빈칸이 나온 문장과 그 변형 문제를 모두 빼기">이미 알아요 · 다시 안 보기</button><label class="row tiny muted" style="margin-left:auto"><input type="checkbox" data-act="drill-live" ${DRILL_LIVE ? "checked" : ""}> 철자 표시</label></div>` : `<div class="dkeys"><button class="btn" data-act="drill-submit">따라 쓰고 확인 <kbd>Enter</kbd></button></div>`}
       ${c ? `<p class="tiny muted">출처 ${esc(src(c))}</p>` : ""}
     </section>
     <button class="btn ghost" data-act="drill-quit">그만하기</button>`;
@@ -2862,6 +2884,7 @@ const ACTIONS = {
   "drill-order": (el) => { S.drill.order = el.dataset.v; render(); },
   "drill-start": () => startDrill((S.onlyEss ? S.concepts.filter((c) => c.tier === "essential") : S.concepts).filter((c) => !conceptSkipped(c))),
   "drill-submit": () => drillSubmit(),
+  "drill-live": (el) => { setDrillLive(el.checked); const di = $("#drill-in"); if (di) { drillLive(di); di.focus({ preventScroll: true }); } },
   "drill-hint": () => { const d = S.drill, el = $("#drill-in"); d.value = el ? el.value : d.value; d.hint = Math.min(d.hint + 1, d.items[d.cur].answer.split(" / ")[0].length); render(); },
   "drill-giveup": () => drillMiss(),
   "drill-skip": () => {
@@ -2944,6 +2967,7 @@ document.addEventListener("change", (e) => {
   const el = e.target;
   if (el.dataset.act === "only-ess") return ACTIONS["only-ess"](el);
   if (el.dataset.act === "auto-missed") { AUTO.onlyMissed = el.checked; return; }
+  if (el.dataset.act === "drill-live") return ACTIONS["drill-live"](el);
   if ("cardgroup" in el.dataset) { S.cardKind = el.value ? `group:${el.value}` : "memo"; S.cards = null; return render(); }
   if (el.dataset.auto) { AUTO[{ "auto-front": "front", "auto-back": "back", "auto-rounds": "rounds" }[el.dataset.auto]] = +el.value; return autoStep(); }
   if (el.id === "d-files") {
@@ -2980,6 +3004,10 @@ document.addEventListener("compositionend", (e) => {
   if (drillEnterPending) { drillEnterPending = false; drillLastSubmit = Date.now(); setTimeout(drillSubmit, 0); }
 });
 document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight" && e.target.id === "drill-in" && !e.isComposing && !e.target.value && S.drill && S.drill.mode === "answer" && !S.drill.lock) {
+    e.preventDefault();
+    return drillMiss();
+  }
   if (e.key === "Enter" && e.target.id === "drill-in") {
     e.preventDefault();
     if (e.isComposing) { drillEnterPending = true; return; }
